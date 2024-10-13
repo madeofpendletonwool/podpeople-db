@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PodPeopleDB</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+</head>
+<body>
+    <div class="container">
+        <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
+        <h1>Welcome to PodPeopleDB</h1>
+        <form hx-get="/api/podcast/" hx-target="#podcast-info" hx-trigger="submit">
+            <input type="text" name="id" placeholder="Enter Podcast Index Feed ID" required>
+            <button type="submit">Search</button>
+        </form>
+        <div id="podcast-info"></div>
+    </div>
+</body>
+</html>

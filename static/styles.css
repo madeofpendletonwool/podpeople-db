@@ -1,0 +1,82 @@
+/* Reset some default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Body styling with gradient background */
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #f06, #4a90e2);
+    padding: 20px;
+    color: #fff;
+}
+
+/* Container for centering and spacing */
+.container {
+    width: 100%;
+    max-width: 600px;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+/* Logo image styling */
+.logo {
+    max-width: 150px;
+    margin: 0 auto 20px;
+}
+
+/* Inputs and buttons with some flair */
+input, textarea, button {
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+input, textarea {
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+button {
+    background-color: #4a90e2;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #357ABD;
+}
+
+/* List styling */
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    margin: 10px 0;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+/* Links */
+a {
+    color: #4a90e2;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Podcast.Title}} - PodPeopleDB</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+</head>
+<body>
+    <div class="container">
+        <img src="/static/logo.png" alt="PodPeopleDB Logo" class="logo">
+        <h1>{{.Podcast.Title}}</h1>
+        <img src="{{.Podcast.Image}}" alt="{{.Podcast.Title}} Artwork" style="max-width: 300px;">
+        <p><strong>Author:</strong> {{.Podcast.Author}}</p>
+        <p><strong>Owner:</strong> {{.Podcast.OwnerName}}</p>
+        <p><strong>Description:</strong> {{.Podcast.Description}}</p>
+        <p><strong>Website:</strong> <a href="{{.Podcast.Link}}" target="_blank">{{.Podcast.Link}}</a></p>
+        <p><strong>Feed URL:</strong> <a href="{{.Podcast.FeedURL}}" target="_blank">{{.Podcast.FeedURL}}</a></p>
+
+        <h2>Hosts</h2>
+        <ul>
+            {{range .Hosts}}
+            <li>
+                <h3>{{.Name}}</h3>
+                <p>{{.Description}}</p>
+                <a href="{{.Link}}" target="_blank">More Info</a>
+            </li>
+            {{end}}
+        </ul>
+
+        <h2>Add New Host</h2>
+        <form hx-post="/add-host" hx-target="#host-list">
+            <input type="hidden" name="podcastId" value="{{.Podcast.ID}}">
+            <input type="text" name="name" placeholder="Host Name" required>
+            <textarea name="description" placeholder="Host Description" required></textarea>
+            <input type="url" name="link" placeholder="Host Link">
+            <button type="submit">Add Host</button>
+        </form>
+        <div id="host-list"></div>
+    </div>
+</body>
+</html>
