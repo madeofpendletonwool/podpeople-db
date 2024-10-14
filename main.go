@@ -1,36 +1,54 @@
 package main
 
 import (
-	"crypto/sha1"
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
+	"strconv"
+	"strings"
 	"time"
 
-	// "os"
-	"strconv"
+	"encoding/xml"
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type Person struct {
+	XMLName  xml.Name `xml:"person"`
+	Name     string   `xml:",chardata"`
+	Role     string   `xml:"role,attr"`
+	Group    string   `xml:"group,attr,omitempty"`
+	Img      string   `xml:"img,attr,omitempty"`
+	Href     string   `xml:"href,attr,omitempty"`
+	Episodes []string // List of episode titles this person is associated with
+}
+
 type Podcast struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	FeedURL     string `json:"feedUrl"`
+	ID          int      `json:"id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Author      string   `json:"author"`
+	OwnerName   string   `json:"ownerName"`
+	Image       string   `json:"image"`
+	Link        string   `json:"link"`
+	FeedURL     string   `json:"url"`
+	Hosts       []Person `json:"hosts"`
 }
 
 type Host struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
+	Role        string `json:"role"`
 	Description string `json:"description"`
 	Link        string `json:"link"`
+	Img         string `json:"img"`
 	PodcastID   int    `json:"podcastId"`
 }
 
@@ -52,8 +70,11 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", homeHandler)
 	r.HandleFunc("/podcast/{id}", podcastHandler)
+	r.HandleFunc("/podcast/", podcastHandler) // This will handle query parameters
 	r.HandleFunc("/add-host", addHostHandler).Methods("POST")
+	r.HandleFunc("/delete-host/{id}", deleteHostHandler).Methods("DELETE")
 	r.HandleFunc("/api/podcast/{id}", getPodcastFromIndexAPI)
+	r.HandleFunc("/api/hosts/{id}", getHostsAPI)
 
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
@@ -63,14 +84,16 @@ func main() {
 
 func initDB() {
 	_, err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS hosts (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			name TEXT,
-			description TEXT,
-			link TEXT,
-			podcast_id INTEGER
-		)
-	`)
+        CREATE TABLE IF NOT EXISTS hosts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            role TEXT,
+            description TEXT,
+            link TEXT,
+            img TEXT,
+            podcast_id INTEGER
+        )
+    `)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -81,30 +104,65 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func podcastHandler(w http.ResponseWriter, r *http.Request) {
+	var podcastID string
 	vars := mux.Vars(r)
-	podcastID := vars["id"]
+	if id, ok := vars["id"]; ok {
+		podcastID = id
+	} else {
+		podcastID = r.URL.Query().Get("id")
+	}
+
+	if podcastID == "" {
+		http.Error(w, "Missing podcast ID", http.StatusBadRequest)
+		return
+	}
 
 	podcast, err := getPodcastDetails(podcastID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error getting podcast details: %v", err)
+		http.Error(w, fmt.Sprintf("Error getting podcast details: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	hosts, err := getHostsForPodcast(podcastID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	var hosts []Host
+	if len(podcast.Hosts) == 0 {
+		// If no <podcast:person> tags were found, fetch hosts from the database
+		hosts, err = getHostsForPodcast(podcastID)
+		if err != nil {
+			log.Printf("Error getting hosts: %v", err)
+			http.Error(w, fmt.Sprintf("Error getting hosts: %v", err), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	data := struct {
-		Podcast Podcast
-		Hosts   []Host
+		Podcast    Podcast
+		Hosts      []Host
+		PersonTags bool
 	}{
-		Podcast: podcast,
-		Hosts:   hosts,
+		Podcast:    podcast,
+		Hosts:      hosts,
+		PersonTags: len(podcast.Hosts) > 0,
 	}
 
-	templates.ExecuteTemplate(w, "podcast.html", data)
+	err = templates.ExecuteTemplate(w, "podcast.html", data)
+	if err != nil {
+		log.Printf("Error executing template: %v", err)
+		http.Error(w, fmt.Sprintf("Error rendering page: %v", err), http.StatusInternalServerError)
+	}
+}
+
+func isValidImageURL(url string) bool {
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := client.Head(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode == http.StatusOK && strings.HasPrefix(resp.Header.Get("Content-Type"), "image/")
 }
 
 func addHostHandler(w http.ResponseWriter, r *http.Request) {
@@ -115,35 +173,165 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	podcastID, _ := strconv.Atoi(r.Form.Get("podcastId"))
+	imgURL := r.Form.Get("img")
+	if imgURL != "" && !isValidImageURL(imgURL) {
+		imgURL = "" // Clear the URL if it's invalid
+	}
+
 	host := Host{
 		Name:        r.Form.Get("name"),
+		Role:        r.Form.Get("role"),
 		Description: r.Form.Get("description"),
 		Link:        r.Form.Get("link"),
+		Img:         imgURL,
 		PodcastID:   podcastID,
 	}
 
-	_, err = db.Exec("INSERT INTO hosts (name, description, link, podcast_id) VALUES (?, ?, ?, ?)",
-		host.Name, host.Description, host.Link, host.PodcastID)
+	result, err := db.Exec("INSERT INTO hosts (name, role, description, link, img, podcast_id) VALUES (?, ?, ?, ?, ?, ?)",
+		host.Name, host.Role, host.Description, host.Link, host.Img, host.PodcastID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/podcast/%d", podcastID), http.StatusSeeOther)
+	hostID, _ := result.LastInsertId()
+	host.ID = int(hostID)
+
+	templates.ExecuteTemplate(w, "host-item", host)
+}
+
+func deleteHostHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	hostID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid host ID", http.StatusBadRequest)
+		return
+	}
+
+	_, err = db.Exec("DELETE FROM hosts WHERE id = ?", hostID)
+	if err != nil {
+		http.Error(w, "Failed to delete host", http.StatusInternalServerError)
+		return
+	}
+
+	// Return an empty response to indicate success
+	w.WriteHeader(http.StatusOK)
+}
+
+func deduplicateHosts(persons []Person) []Person {
+	uniqueHosts := make(map[string]*Person)
+
+	for _, person := range persons {
+		if existingPerson, found := uniqueHosts[person.Name]; found {
+			// Merge roles if they're different
+			if existingPerson.Role != person.Role {
+				existingPerson.Role += ", " + person.Role
+			}
+			// Append episode if it's not already in the list
+			if len(person.Episodes) > 0 && !contains(existingPerson.Episodes, person.Episodes[0]) {
+				existingPerson.Episodes = append(existingPerson.Episodes, person.Episodes...)
+			}
+		} else {
+			personCopy := person
+			uniqueHosts[person.Name] = &personCopy
+		}
+	}
+
+	result := make([]Person, 0, len(uniqueHosts))
+	for _, person := range uniqueHosts {
+		result = append(result, *person)
+	}
+
+	return result
+}
+
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
 
 func getPodcastDetails(id string) (Podcast, error) {
-	// This is a placeholder. In a real application, you would call the Podcast Index API here.
-	return Podcast{
-		ID:          1,
-		Title:       "Example Podcast",
-		Description: "This is an example podcast",
-		FeedURL:     "http://example.com/feed",
-	}, nil
+	url := fmt.Sprintf("http://localhost:5000/api/podcast?id=%s", id)
+	resp, err := http.Get(url)
+	if err != nil {
+		return Podcast{}, fmt.Errorf("error making request to API: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return Podcast{}, fmt.Errorf("error reading response body: %v", err)
+	}
+
+	var result struct {
+		Feed Podcast `json:"feed"`
+	}
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return Podcast{}, fmt.Errorf("error unmarshalling JSON: %v", err)
+	}
+
+	log.Printf("Fetching podcast feed from URL: %s", result.Feed.FeedURL)
+	feedResp, err := http.Get(result.Feed.FeedURL)
+	if err != nil {
+		return Podcast{}, fmt.Errorf("error fetching podcast feed: %v", err)
+	}
+	defer feedResp.Body.Close()
+
+	// Log a sample of the feed content
+	feedContent, _ := ioutil.ReadAll(feedResp.Body)
+	log.Printf("First 1000 characters of feed content: %s", string(feedContent[:1000]))
+	feedResp.Body = ioutil.NopCloser(bytes.NewBuffer(feedContent))
+
+	decoder := xml.NewDecoder(feedResp.Body)
+	var persons []Person
+	var currentEpisodeTitle string
+
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return Podcast{}, fmt.Errorf("error parsing feed XML: %v", err)
+		}
+
+		switch se := token.(type) {
+		case xml.StartElement:
+			if se.Name.Local == "item" {
+				// We've entered a new item/episode
+				currentEpisodeTitle = ""
+			} else if se.Name.Local == "title" && currentEpisodeTitle == "" {
+				// This is the episode title
+				var title string
+				decoder.DecodeElement(&title, &se)
+				currentEpisodeTitle = title
+			} else if se.Name.Space == "https://podcastindex.org/namespace/1.0" && se.Name.Local == "person" {
+				var person Person
+				err = decoder.DecodeElement(&person, &se)
+				if err != nil {
+					return Podcast{}, fmt.Errorf("error decoding person element: %v", err)
+				}
+				if currentEpisodeTitle != "" {
+					person.Episodes = []string{currentEpisodeTitle}
+				}
+				log.Printf("Decoded person: %+v", person)
+				persons = append(persons, person)
+			}
+		}
+	}
+
+	log.Printf("Found %d persons in the podcast feed", len(persons))
+	result.Feed.Hosts = deduplicateHosts(persons)
+	return result.Feed, nil
 }
 
 func getHostsForPodcast(podcastID string) ([]Host, error) {
-	rows, err := db.Query("SELECT id, name, description, link FROM hosts WHERE podcast_id = ?", podcastID)
+	rows, err := db.Query("SELECT id, name, role, description, link, img FROM hosts WHERE podcast_id = ?", podcastID)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +340,7 @@ func getHostsForPodcast(podcastID string) ([]Host, error) {
 	var hosts []Host
 	for rows.Next() {
 		var h Host
-		err := rows.Scan(&h.ID, &h.Name, &h.Description, &h.Link)
+		err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Description, &h.Link, &h.Img)
 		if err != nil {
 			return nil, err
 		}
@@ -165,54 +353,24 @@ func getPodcastFromIndexAPI(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	podcastID := vars["id"]
 
-	apiKey := os.Getenv("API_KEY")
-	apiSecret := os.Getenv("API_SECRET")
-	apiHeaderTime := strconv.FormatInt(time.Now().Unix(), 10)
-
-	// Create the authorization hash
-	hash := sha1.New()
-	hash.Write([]byte(apiKey + apiSecret + apiHeaderTime))
-	authHeader := fmt.Sprintf("%x", hash.Sum(nil))
-
-	// Create the request
-	url := fmt.Sprintf("https://api.podcastindex.org/api/1.0/podcasts/byfeedid?id=%s", podcastID)
-	req, err := http.NewRequest("GET", url, nil)
+	podcast, err := getPodcastDetails(podcastID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Set the required headers
-	req.Header.Set("User-Agent", "PodPeopleDB/1.0")
-	req.Header.Set("X-Auth-Key", apiKey)
-	req.Header.Set("X-Auth-Date", apiHeaderTime)
-	req.Header.Set("Authorization", authHeader)
+	json.NewEncoder(w).Encode(podcast)
+}
 
-	// Make the request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
+func getHostsAPI(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	podcastID := vars["id"]
 
-	// Read and parse the response
-	body, err := ioutil.ReadAll(resp.Body)
+	hosts, err := getHostsForPodcast(podcastID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var result struct {
-		Feed Podcast `json:"feed"`
-	}
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Return the podcast data
-	json.NewEncoder(w).Encode(result.Feed)
+	json.NewEncoder(w).Encode(hosts)
 }

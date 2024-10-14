@@ -6,38 +6,86 @@
     <title>{{.Podcast.Title}} - PodPeopleDB</title>
     <link rel="stylesheet" href="/static/styles.css">
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+    <script>
+        function handleImageError(img) {
+            img.onerror = null;
+            img.src = '/static/default-avatar.png';
+        }
+    </script>
 </head>
 <body>
     <div class="container">
-        <img src="/static/logo.png" alt="PodPeopleDB Logo" class="logo">
+        <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
         <h1>{{.Podcast.Title}}</h1>
-        <img src="{{.Podcast.Image}}" alt="{{.Podcast.Title}} Artwork" style="max-width: 300px;">
-        <p><strong>Author:</strong> {{.Podcast.Author}}</p>
-        <p><strong>Owner:</strong> {{.Podcast.OwnerName}}</p>
-        <p><strong>Description:</strong> {{.Podcast.Description}}</p>
-        <p><strong>Website:</strong> <a href="{{.Podcast.Link}}" target="_blank">{{.Podcast.Link}}</a></p>
-        <p><strong>Feed URL:</strong> <a href="{{.Podcast.FeedURL}}" target="_blank">{{.Podcast.FeedURL}}</a></p>
-
+        <img src="{{.Podcast.Image}}" alt="{{.Podcast.Title}} Artwork" class="podcast-image">
+        <div class="podcast-info">
+            <p><strong>Author:</strong> {{.Podcast.Author}}</p>
+            <p><strong>Owner:</strong> {{.Podcast.OwnerName}}</p>
+            <p><strong>Description:</strong> {{.Podcast.Description}}</p>
+            <p><strong>Website:</strong> <a href="{{.Podcast.Link}}" target="_blank">{{.Podcast.Link}}</a></p>
+            <p><strong>Feed URL:</strong> <a href="{{.Podcast.FeedURL}}" target="_blank">{{.Podcast.FeedURL}}</a></p>
+        </div>        
         <h2>Hosts</h2>
-        <ul>
-            {{range .Hosts}}
-            <li>
-                <h3>{{.Name}}</h3>
-                <p>{{.Description}}</p>
-                <a href="{{.Link}}" target="_blank">More Info</a>
-            </li>
+        <div id="host-list">
+            {{if .PersonTags}}
+                {{range .Podcast.Hosts}}
+                <div class="host-item">
+                    <img src="{{.Img}}" alt="{{.Name}}" class="host-image" onerror="handleImageError(this)">
+                    <div class="host-info">
+                        <h3>{{.Name}}</h3>
+                        <p><strong>Role:</strong> {{.Role}}</p>
+                        {{if .Group}}<p><strong>Group:</strong> {{.Group}}</p>{{end}}
+                        {{if .Href}}<a href="{{.Href}}" target="_blank">More Info</a>{{end}}
+                        {{if .Episodes}}
+                        <p><strong>Associated Episodes:</strong></p>
+                        <ul>
+                            {{range .Episodes}}
+                                <li>{{.}}</li>
+                            {{end}}
+                        </ul>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            {{else}}
+                {{if .Hosts}}
+                    {{range .Hosts}}
+                    <div class="host-item" id="host-{{.ID}}">
+                        <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                             alt="{{.Name}}"
+                             class="host-image"
+                             onerror="handleImageError(this)">
+                        <div class="host-info">
+                            <h3>{{.Name}}</h3>
+                            <p><strong>Role:</strong> {{.Role}}</p>
+                            <p>{{.Description}}</p>
+                            <a href="{{.Link}}" target="_blank">More Info</a>
+                            <button hx-delete="/delete-host/{{.ID}}"
+                                    hx-target="#host-{{.ID}}"
+                                    hx-swap="outerHTML"
+                                    class="delete-host">Delete</button>
+                        </div>
+                    </div>
+                    {{end}}
+                {{else}}
+                    <p>No hosts found for this podcast.</p>
+                {{end}}
+                <h2>Add New Host</h2>
+                <form hx-post="/add-host" hx-target="#host-list" hx-swap="beforeend">
+                    <input type="hidden" name="podcastId" value="{{.Podcast.ID}}">
+                    <input type="text" name="name" placeholder="Host Name" required>
+                    <select name="role" required>
+                        <option value="">Select Role</option>
+                        <option value="Host">Host</option>
+                        <option value="Guest">Guest</option>
+                    </select>
+                    <textarea name="description" placeholder="Host Description" required></textarea>
+                    <input type="url" name="link" placeholder="Host Link (Wiki, Github, etc.)" required>
+                    <input type="url" name="img" placeholder="Host Image URL (optional)">
+                    <button type="submit">Add Host</button>
+                </form>
             {{end}}
-        </ul>
-
-        <h2>Add New Host</h2>
-        <form hx-post="/add-host" hx-target="#host-list">
-            <input type="hidden" name="podcastId" value="{{.Podcast.ID}}">
-            <input type="text" name="name" placeholder="Host Name" required>
-            <textarea name="description" placeholder="Host Description" required></textarea>
-            <input type="url" name="link" placeholder="Host Link">
-            <button type="submit">Add Host</button>
-        </form>
-        <div id="host-list"></div>
+        </div>
     </div>
 </body>
 </html>

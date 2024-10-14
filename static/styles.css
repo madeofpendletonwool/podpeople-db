@@ -20,7 +20,7 @@ body {
 /* Container for centering and spacing */
 .container {
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     background-color: rgba(255, 255, 255, 0.1);
     padding: 30px;
     border-radius: 15px;
@@ -30,12 +30,66 @@ body {
 
 /* Logo image styling */
 .logo {
-    max-width: 150px;
+    max-width: 200px;
     margin: 0 auto 20px;
 }
 
-/* Inputs and buttons with some flair */
-input, textarea, button {
+/* Headings */
+h1, h2 {
+    margin-bottom: 20px;
+}
+
+/* Podcast image */
+.podcast-image {
+    max-width: 300px;
+    margin-bottom: 20px;
+}
+
+/* Podcast info */
+.podcast-info p {
+    font-size: 1.1em;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+/* Host list */
+#host-list {
+    margin-bottom: 20px;
+}
+
+.host-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    text-align: left;
+}
+
+.host-item:last-child {
+    border-bottom: none;
+}
+
+.host-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+.host-info {
+    flex-grow: 1;
+}
+
+.host-info h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+/* Inputs and buttons */
+input, select, textarea, button {
     width: 100%;
     margin: 10px 0;
     padding: 10px;
@@ -44,8 +98,9 @@ input, textarea, button {
     font-size: 16px;
 }
 
-input, textarea {
+input, select, textarea {
     background-color: rgba(255, 255, 255, 0.8);
+    color: #333;
 }
 
 button {
@@ -59,17 +114,19 @@ button:hover {
     background-color: #357ABD;
 }
 
-/* List styling */
-ul {
-    list-style: none;
-    padding: 0;
+.delete-host {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-top: 10px;
+    width: auto;
 }
 
-li {
-    margin: 10px 0;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 10px;
-    border-radius: 5px;
+.delete-host:hover {
+    background-color: #c82333;
 }
 
 /* Links */
@@ -77,6 +134,12 @@ a {
     color: #4a90e2;
     text-decoration: none;
 }
+
 a:hover {
     text-decoration: underline;
+}
+
+/* Form styling */
+form {
+    margin-top: 20px;
 }
