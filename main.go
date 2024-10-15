@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -65,7 +66,12 @@ func main() {
 
 	initDB()
 
-	templates = template.Must(template.ParseGlob("templates/*.html"))
+	funcMap := template.FuncMap{
+		"lower": strings.ToLower,
+	}
+	templates = template.Must(template.New("").Funcs(funcMap).ParseGlob("templates/*.html"))
+
+	// templates = template.Must(template.ParseGlob("templates/*.html"))
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", homeHandler)
@@ -220,12 +226,13 @@ func deleteHostHandler(w http.ResponseWriter, r *http.Request) {
 
 func deduplicateHosts(persons []Person) []Person {
 	uniqueHosts := make(map[string]*Person)
-
 	for _, person := range persons {
 		if existingPerson, found := uniqueHosts[person.Name]; found {
-			// Merge roles if they're different
-			if existingPerson.Role != person.Role {
-				existingPerson.Role += ", " + person.Role
+			// Prioritize "host" role
+			if strings.Contains(strings.ToLower(person.Role), "host") {
+				existingPerson.Role = "Host"
+			} else if existingPerson.Role != "Host" {
+				existingPerson.Role = "Guest"
 			}
 			// Append episode if it's not already in the list
 			if len(person.Episodes) > 0 && !contains(existingPerson.Episodes, person.Episodes[0]) {
@@ -233,6 +240,11 @@ func deduplicateHosts(persons []Person) []Person {
 			}
 		} else {
 			personCopy := person
+			if strings.Contains(strings.ToLower(personCopy.Role), "host") {
+				personCopy.Role = "Host"
+			} else {
+				personCopy.Role = "Guest"
+			}
 			uniqueHosts[person.Name] = &personCopy
 		}
 	}
@@ -241,6 +253,11 @@ func deduplicateHosts(persons []Person) []Person {
 	for _, person := range uniqueHosts {
 		result = append(result, *person)
 	}
+
+	// Sort the result slice
+	sort.Slice(result, func(i, j int) bool {
+		return len(result[i].Episodes) > len(result[j].Episodes)
+	})
 
 	return result
 }
@@ -255,7 +272,7 @@ func contains(slice []string, item string) bool {
 }
 
 func getPodcastDetails(id string) (Podcast, error) {
-	url := fmt.Sprintf("http://localhost:5000/api/podcast?id=%s", id)
+	url := fmt.Sprintf("http://0.0.0.0:5000/api/podcast?id=%s", id)
 	resp, err := http.Get(url)
 	if err != nil {
 		return Podcast{}, fmt.Errorf("error making request to API: %v", err)

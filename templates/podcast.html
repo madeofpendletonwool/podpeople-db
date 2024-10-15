@@ -11,6 +11,14 @@
             img.onerror = null;
             img.src = '/static/default-avatar.png';
         }
+        function toggleEpisodes(id) {
+            var episodeList = document.getElementById('episodes-' + id);
+            if (episodeList.style.display === 'none') {
+                episodeList.style.display = 'block';
+            } else {
+                episodeList.style.display = 'none';
+            }
+        }
     </script>
 </head>
 <body>
@@ -25,64 +33,133 @@
             <p><strong>Website:</strong> <a href="{{.Podcast.Link}}" target="_blank">{{.Podcast.Link}}</a></p>
             <p><strong>Feed URL:</strong> <a href="{{.Podcast.FeedURL}}" target="_blank">{{.Podcast.FeedURL}}</a></p>
         </div>        
-        <h2>Hosts</h2>
+        <h2>Hosts and Guests</h2>
         <div id="host-list">
             {{if .PersonTags}}
+                <h3>Hosts</h3>
                 {{range .Podcast.Hosts}}
-                <div class="host-item">
-                    <img src="{{.Img}}" alt="{{.Name}}" class="host-image" onerror="handleImageError(this)">
-                    <div class="host-info">
-                        <h3>{{.Name}}</h3>
-                        <p><strong>Role:</strong> {{.Role}}</p>
-                        {{if .Group}}<p><strong>Group:</strong> {{.Group}}</p>{{end}}
-                        {{if .Href}}<a href="{{.Href}}" target="_blank">More Info</a>{{end}}
-                        {{if .Episodes}}
-                        <p><strong>Associated Episodes:</strong></p>
-                        <ul>
-                            {{range .Episodes}}
-                                <li>{{.}}</li>
-                            {{end}}
-                        </ul>
-                        {{end}}
-                    </div>
-                </div>
+                    {{if eq .Role "Host"}}
+                        <div class="host-item">
+                            <img src="{{.Img}}" alt="{{.Name}}" class="host-image" onerror="handleImageError(this)">
+                            <div class="host-info">
+                                <h3>{{.Name}}</h3>
+                                <p><strong>Role:</strong> {{.Role}}</p>
+                                {{if .Group}}<p><strong>Group:</strong> {{.Group}}</p>{{end}}
+                                {{if .Href}}<a href="{{.Href}}" target="_blank">More Info</a>{{end}}
+                                {{if .Episodes}}
+                                    {{if gt (len .Episodes) 5}}
+                                        <p><strong>Associated Episodes:</strong> <a href="#" onclick="toggleEpisodes('{{.Name}}'); return false;">Show/Hide ({{len .Episodes}} episodes)</a></p>
+                                        <ul id="episodes-{{.Name}}" style="display: none;">
+                                            {{range .Episodes}}
+                                                <li>{{.}}</li>
+                                            {{end}}
+                                        </ul>
+                                    {{else}}
+                                        <p><strong>Associated Episodes:</strong></p>
+                                        <ul>
+                                            {{range .Episodes}}
+                                                <li>{{.}}</li>
+                                            {{end}}
+                                        </ul>
+                                    {{end}}
+                                {{end}}
+                            </div>
+                        </div>
+                    {{end}}
+                {{end}}
+                
+                <h3>Guests</h3>
+                {{range .Podcast.Hosts}}
+                    {{if eq .Role "Guest"}}
+                        <div class="host-item">
+                            <img src="{{.Img}}" alt="{{.Name}}" class="host-image" onerror="handleImageError(this)">
+                            <div class="host-info">
+                                <h3>{{.Name}}</h3>
+                                <p><strong>Role:</strong> {{.Role}}</p>
+                                {{if .Group}}<p><strong>Group:</strong> {{.Group}}</p>{{end}}
+                                {{if .Href}}<a href="{{.Href}}" target="_blank">More Info</a>{{end}}
+                                {{if .Episodes}}
+                                    {{if gt (len .Episodes) 5}}
+                                        <p><strong>Associated Episodes:</strong> <a href="#" onclick="toggleEpisodes('{{.Name}}'); return false;">Show/Hide ({{len .Episodes}} episodes)</a></p>
+                                        <ul id="episodes-{{.Name}}" style="display: none;">
+                                            {{range .Episodes}}
+                                                <li>{{.}}</li>
+                                            {{end}}
+                                        </ul>
+                                    {{else}}
+                                        <p><strong>Associated Episodes:</strong></p>
+                                        <ul>
+                                            {{range .Episodes}}
+                                                <li>{{.}}</li>
+                                            {{end}}
+                                        </ul>
+                                    {{end}}
+                                {{end}}
+                            </div>
+                        </div>
+                    {{end}}
                 {{end}}
             {{else}}
                 {{if .Hosts}}
+                    <h3>Hosts</h3>
                     {{range .Hosts}}
-                    <div class="host-item" id="host-{{.ID}}">
-                        <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
-                             alt="{{.Name}}"
-                             class="host-image"
-                             onerror="handleImageError(this)">
-                        <div class="host-info">
-                            <h3>{{.Name}}</h3>
-                            <p><strong>Role:</strong> {{.Role}}</p>
-                            <p>{{.Description}}</p>
-                            <a href="{{.Link}}" target="_blank">More Info</a>
-                            <button hx-delete="/delete-host/{{.ID}}"
-                                    hx-target="#host-{{.ID}}"
-                                    hx-swap="outerHTML"
-                                    class="delete-host">Delete</button>
-                        </div>
-                    </div>
+                        {{if eq .Role "Host"}}
+                            <div class="host-item" id="host-{{.ID}}">
+                                <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                     alt="{{.Name}}"
+                                     class="host-image"
+                                     onerror="handleImageError(this)">
+                                <div class="host-info">
+                                    <h3>{{.Name}}</h3>
+                                    <p><strong>Role:</strong> {{.Role}}</p>
+                                    <p>{{.Description}}</p>
+                                    <a href="{{.Link}}" target="_blank">More Info</a>
+                                    <button hx-delete="/delete-host/{{.ID}}"
+                                            hx-target="#host-{{.ID}}"
+                                            hx-swap="outerHTML"
+                                            class="delete-host">Delete</button>
+                                </div>
+                            </div>
+                        {{end}}
+                    {{end}}
+                    
+                    <h3>Guests</h3>
+                    {{range .Hosts}}
+                        {{if eq .Role "Guest"}}
+                            <div class="host-item" id="host-{{.ID}}">
+                                <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                     alt="{{.Name}}"
+                                     class="host-image"
+                                     onerror="handleImageError(this)">
+                                <div class="host-info">
+                                    <h3>{{.Name}}</h3>
+                                    <p><strong>Role:</strong> {{.Role}}</p>
+                                    <p>{{.Description}}</p>
+                                    <a href="{{.Link}}" target="_blank">More Info</a>
+                                    <button hx-delete="/delete-host/{{.ID}}"
+                                            hx-target="#host-{{.ID}}"
+                                            hx-swap="outerHTML"
+                                            class="delete-host">Delete</button>
+                                </div>
+                            </div>
+                        {{end}}
                     {{end}}
                 {{else}}
-                    <p>No hosts found for this podcast.</p>
+                    <p>No hosts or guests found for this podcast.</p>
                 {{end}}
-                <h2>Add New Host</h2>
+                <h2>Add New Host/Guest</h2>
                 <form hx-post="/add-host" hx-target="#host-list" hx-swap="beforeend">
                     <input type="hidden" name="podcastId" value="{{.Podcast.ID}}">
-                    <input type="text" name="name" placeholder="Host Name" required>
+                    <input type="text" name="name" placeholder="Name" required>
                     <select name="role" required>
                         <option value="">Select Role</option>
                         <option value="Host">Host</option>
                         <option value="Guest">Guest</option>
                     </select>
-                    <textarea name="description" placeholder="Host Description" required></textarea>
-                    <input type="url" name="link" placeholder="Host Link (Wiki, Github, etc.)" required>
-                    <input type="url" name="img" placeholder="Host Image URL (optional)">
-                    <button type="submit">Add Host</button>
+                    <textarea name="description" placeholder="Description" required></textarea>
+                    <input type="url" name="link" placeholder="Link (Wiki, Github, etc.)" required>
+                    <input type="url" name="img" placeholder="Image URL (optional)">
+                    <button type="submit">Add Host/Guest</button>
                 </form>
             {{end}}
         </div>

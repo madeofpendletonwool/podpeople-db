@@ -3,16 +3,16 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Arial', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
-/* Body styling with gradient background */
+/* Body styling with dark background */
 body {
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #f06, #4a90e2);
+    background-color: #000;
     padding: 20px;
     color: #fff;
 }
@@ -21,35 +21,70 @@ body {
 .container {
     width: 100%;
     max-width: 800px;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: #111;
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Prism-like accent */
+.container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        #ff00001a,
+        #ff7f001a,
+        #ffff001a,
+        #00ff001a,
+        #0000ff1a,
+        #8b00ff1a
+    );
+    animation: rotate 10s linear infinite;
+    z-index: -1;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Logo image styling */
 .logo {
-    max-width: 200px;
+    max-width: 150px;
     margin: 0 auto 20px;
 }
 
 /* Headings */
 h1, h2 {
     margin-bottom: 20px;
+    color: #fff;
 }
 
 /* Podcast image */
 .podcast-image {
-    max-width: 300px;
+    max-width: 200px;
     margin-bottom: 20px;
+    border-radius: 10px;
 }
 
 /* Podcast info */
 .podcast-info p {
-    font-size: 1.1em;
+    font-size: 1em;
     margin-bottom: 10px;
     text-align: left;
+    color: #ccc;
 }
 
 /* Host list */
@@ -62,7 +97,7 @@ h1, h2 {
     align-items: flex-start;
     margin-bottom: 20px;
     padding-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     text-align: left;
 }
 
@@ -86,21 +121,25 @@ h1, h2 {
 .host-info h3 {
     margin-top: 0;
     margin-bottom: 10px;
+    color: #fff;
 }
 
 /* Inputs and buttons */
 input, select, textarea, button {
     width: 100%;
     margin: 10px 0;
-    padding: 10px;
+    padding: 12px;
     border: none;
     border-radius: 5px;
     font-size: 16px;
+    background-color: #222;
+    color: #fff;
+    transition: all 0.3s ease;
 }
 
-input, select, textarea {
-    background-color: rgba(255, 255, 255, 0.8);
-    color: #333;
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.5);
 }
 
 button {
@@ -133,13 +172,31 @@ button:hover {
 a {
     color: #4a90e2;
     text-decoration: none;
+    transition: color 0.3s ease;
 }
 
 a:hover {
-    text-decoration: underline;
+    color: #357ABD;
+    text-decoration: none;
 }
 
 /* Form styling */
 form {
     margin-top: 20px;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .container {
+        padding: 20px;
+    }
+
+    .host-item {
+        flex-direction: column;
+    }
+
+    .host-image {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
 }
