@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,7 +19,9 @@ import (
 	"encoding/xml"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Person struct {
@@ -53,12 +56,21 @@ type Host struct {
 	PodcastID   int    `json:"podcastId"`
 }
 
-var db *sql.DB
-var templates *template.Template
+type Admin struct {
+	ID       int
+	Username string
+	Password string
+}
+
+var (
+	db        *sql.DB
+	templates *template.Template
+	store     = sessions.NewCookieStore([]byte("secret-key"))
+)
 
 func main() {
 	var err error
-	db, err = sql.Open("sqlite3", "./podpeopledb.sqlite")
+	db, err = sql.Open("sqlite3", "/app/podpeople-data/podpeopledb.sqlite")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,21 +83,28 @@ func main() {
 	}
 	templates = template.Must(template.New("").Funcs(funcMap).ParseGlob("templates/*.html"))
 
-	// templates = template.Must(template.ParseGlob("templates/*.html"))
-
 	r := mux.NewRouter()
+
+	// Public routes
 	r.HandleFunc("/", homeHandler)
 	r.HandleFunc("/podcast/{id}", podcastHandler)
-	r.HandleFunc("/podcast/", podcastHandler) // This will handle query parameters
+	r.HandleFunc("/podcast/", podcastHandler)
 	r.HandleFunc("/add-host", addHostHandler).Methods("POST")
-	r.HandleFunc("/delete-host/{id}", deleteHostHandler).Methods("DELETE")
+
+	// Admin routes
+	r.HandleFunc("/admin/login", adminLoginHandler).Methods("GET", "POST")
+	r.HandleFunc("/admin/dashboard", adminAuthMiddleware(adminDashboardHandler))
+	r.HandleFunc("/admin/approve/{id}", adminAuthMiddleware(approveHostHandler)).Methods("POST")
+	r.HandleFunc("/admin/reject/{id}", adminAuthMiddleware(rejectHostHandler)).Methods("POST")
+
+	// API routes
 	r.HandleFunc("/api/podcast/{id}", getPodcastFromIndexAPI)
 	r.HandleFunc("/api/hosts/{id}", getHostsAPI)
 
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	fmt.Println("Server is running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	fmt.Println("Server is running on http://localhost:8085")
+	log.Fatal(http.ListenAndServe(":8085", r))
 }
 
 func initDB() {
@@ -97,12 +116,151 @@ func initDB() {
             description TEXT,
             link TEXT,
             img TEXT,
-            podcast_id INTEGER
-        )
+            podcast_id INTEGER,
+            status TEXT DEFAULT 'pending'
+        );
+        CREATE TABLE IF NOT EXISTS admins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password TEXT
+        );
     `)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Check if any admin user exists
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM admins").Scan(&count)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if count == 0 {
+		// No admin exists, create one
+		username := os.Getenv("ADMIN_USERNAME")
+		password := os.Getenv("ADMIN_PASSWORD")
+
+		if username == "" || password == "" {
+			// Use default values if environment variables are not set
+			username = "admin"
+			password = "admin"
+			log.Println("Warning: Using default admin credentials. Please change them immediately.")
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_, err = db.Exec("INSERT INTO admins (username, password) VALUES (?, ?)", username, string(hashedPassword))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf("Admin user '%s' created successfully\n", username)
+	}
+}
+
+func adminAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := store.Get(r, "session")
+		if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+			http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	}
+}
+
+func adminLoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		templates.ExecuteTemplate(w, "admin_login.html", nil)
+		return
+	}
+
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+
+	var admin Admin
+	err := db.QueryRow("SELECT id, username, password FROM admins WHERE username = ?", username).Scan(&admin.ID, &admin.Username, &admin.Password)
+	if err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(password))
+	if err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	session, _ := store.Get(r, "session")
+	session.Values["authenticated"] = true
+	session.Save(r, w)
+
+	http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
+}
+
+func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query("SELECT id, name, role, description, link, img, podcast_id FROM hosts WHERE status = 'pending'")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var pendingHosts []Host
+	for rows.Next() {
+		var h Host
+		err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Description, &h.Link, &h.Img, &h.PodcastID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		pendingHosts = append(pendingHosts, h)
+	}
+
+	templates.ExecuteTemplate(w, "admin_dashboard.html", pendingHosts)
+}
+
+func approveHostHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	hostID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid host ID", http.StatusBadRequest)
+		return
+	}
+
+	_, err = db.Exec("UPDATE hosts SET status = 'approved' WHERE id = ?", hostID)
+	if err != nil {
+		http.Error(w, "Failed to approve host", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
+}
+
+func rejectHostHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	hostID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid host ID", http.StatusBadRequest)
+		return
+	}
+
+	_, err = db.Exec("DELETE FROM hosts WHERE id = ?", hostID)
+	if err != nil {
+		http.Error(w, "Failed to reject host", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
+}
+
+func sendNotificationToAdmin(host Host) {
+	// Implement your notification system here (e.g., email, push notification)
+	log.Printf("New host submission: %s for podcast %d", host.Name, host.PodcastID)
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -132,8 +290,8 @@ func podcastHandler(w http.ResponseWriter, r *http.Request) {
 
 	var hosts []Host
 	if len(podcast.Hosts) == 0 {
-		// If no <podcast:person> tags were found, fetch hosts from the database
-		hosts, err = getHostsForPodcast(podcastID)
+		// If no <podcast:person> tags were found, fetch approved hosts from the database
+		hosts, err = getApprovedHostsForPodcast(podcastID)
 		if err != nil {
 			log.Printf("Error getting hosts: %v", err)
 			http.Error(w, fmt.Sprintf("Error getting hosts: %v", err), http.StatusInternalServerError)
@@ -141,14 +299,23 @@ func podcastHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if the user is an admin
+	session, _ := store.Get(r, "session")
+	isAdmin := false
+	if auth, ok := session.Values["authenticated"].(bool); ok && auth {
+		isAdmin = true
+	}
+
 	data := struct {
 		Podcast    Podcast
 		Hosts      []Host
 		PersonTags bool
+		IsAdmin    bool
 	}{
 		Podcast:    podcast,
 		Hosts:      hosts,
 		PersonTags: len(podcast.Hosts) > 0,
+		IsAdmin:    isAdmin,
 	}
 
 	err = templates.ExecuteTemplate(w, "podcast.html", data)
@@ -156,6 +323,25 @@ func podcastHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error executing template: %v", err)
 		http.Error(w, fmt.Sprintf("Error rendering page: %v", err), http.StatusInternalServerError)
 	}
+}
+
+func getApprovedHostsForPodcast(podcastID string) ([]Host, error) {
+	rows, err := db.Query("SELECT id, name, role, description, link, img FROM hosts WHERE podcast_id = ? AND status = 'approved'", podcastID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hosts []Host
+	for rows.Next() {
+		var h Host
+		err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Description, &h.Link, &h.Img)
+		if err != nil {
+			return nil, err
+		}
+		hosts = append(hosts, h)
+	}
+	return hosts, nil
 }
 
 func isValidImageURL(url string) bool {
@@ -193,7 +379,7 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 		PodcastID:   podcastID,
 	}
 
-	result, err := db.Exec("INSERT INTO hosts (name, role, description, link, img, podcast_id) VALUES (?, ?, ?, ?, ?, ?)",
+	result, err := db.Exec("INSERT INTO hosts (name, role, description, link, img, podcast_id, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
 		host.Name, host.Role, host.Description, host.Link, host.Img, host.PodcastID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -203,7 +389,12 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 	hostID, _ := result.LastInsertId()
 	host.ID = int(hostID)
 
-	templates.ExecuteTemplate(w, "host-item", host)
+	// Send notification (implement this function)
+	sendNotificationToAdmin(host)
+
+	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(host)
 }
 
 func deleteHostHandler(w http.ResponseWriter, r *http.Request) {
@@ -272,7 +463,14 @@ func contains(slice []string, item string) bool {
 }
 
 func getPodcastDetails(id string) (Podcast, error) {
-	url := fmt.Sprintf("http://0.0.0.0:5000/api/podcast?id=%s", id)
+	searchAPIURL := os.Getenv("SEARCH_API_URL")
+	log.Printf("SEARCH_API_URL: %s", searchAPIURL) // Add this line
+
+	if searchAPIURL == "" {
+		return Podcast{}, fmt.Errorf("SEARCH_API_URL environment variable is not set")
+	}
+
+	url := fmt.Sprintf("%s/api/podcast?id=%s", searchAPIURL, id)
 	resp, err := http.Get(url)
 	if err != nil {
 		return Podcast{}, fmt.Errorf("error making request to API: %v", err)

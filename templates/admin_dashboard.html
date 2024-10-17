@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - PodPeopleDB</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
+        <h1>Admin Dashboard</h1>
+        <h2>Pending Host Submissions</h2>
+        <div id="pending-hosts-list">
+            {{if .}}
+                {{range .}}
+                    <div class="host-item pending-host" id="host-{{.ID}}">
+                        <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                             alt="{{.Name}}"
+                             class="host-image"
+                             onerror="this.onerror=null; this.src='/static/default-avatar.png';">
+                        <div class="host-info">
+                            <h3>{{.Name}}</h3>
+                            <p><strong>Role:</strong> {{.Role}}</p>
+                            <p><strong>Podcast ID:</strong> {{.PodcastID}}</p>
+                            {{if .Description}}<p>{{.Description}}</p>{{end}}
+                            {{if .Link}}<a href="{{.Link}}" target="_blank">More Info</a>{{end}}
+                            <div class="admin-actions">
+                                <form action="/admin/approve/{{.ID}}" method="POST">
+                                    <button type="submit" class="approve-button">Approve</button>
+                                </form>
+                                <form action="/admin/reject/{{.ID}}" method="POST">
+                                    <button type="submit" class="reject-button">Reject</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {{end}}
+            {{else}}
+                <p class="no-submissions">No pending submissions.</p>
+            {{end}}
+        </div>
+    </div>
+</body>
+</html>

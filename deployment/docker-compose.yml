@@ -1,0 +1,12 @@
+version: '3'
+services:
+  podpeopledb:
+    image: madeofpendletonwool/podpeople_db:latest
+    ports:
+      - "8085:8085"
+    environment:
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=password
+      - SEARCH_API_URL=http://search-api:5000
+    volumes:
+      - /my/db/mount/point/podpeople-data:/app/podpeople-data

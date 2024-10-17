@@ -200,3 +200,60 @@ form {
         margin-bottom: 10px;
     }
 }
+
+.pending-host {
+    opacity: 0.7;
+    border: 2px dashed #4a90e2;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+.pending-label {
+    color: #4a90e2;
+    font-weight: bold;
+    margin-bottom: 10px;
+    display: block;
+}
+.add-host-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.approve-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.approve-button:hover {
+    background-color: #45a049;
+}
+.reject-button {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.reject-button:hover {
+    background-color: #da190b;
+}
+.pending-host {
+    border: 2px solid #4a90e2;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+.no-submissions {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+}

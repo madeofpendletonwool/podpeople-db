@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Podcast.Title}} - PodPeopleDB</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
     <script>
         function handleImageError(img) {
@@ -99,7 +100,7 @@
                         </div>
                     {{end}}
                 {{end}}
-            {{else}}
+                {{else}}
                 {{if .Hosts}}
                     <h3>Hosts</h3>
                     {{range .Hosts}}
@@ -114,10 +115,12 @@
                                     <p><strong>Role:</strong> {{.Role}}</p>
                                     <p>{{.Description}}</p>
                                     <a href="{{.Link}}" target="_blank">More Info</a>
-                                    <button hx-delete="/delete-host/{{.ID}}"
-                                            hx-target="#host-{{.ID}}"
-                                            hx-swap="outerHTML"
-                                            class="delete-host">Delete</button>
+                                    {{if $.IsAdmin}}
+                                        <button hx-delete="/delete-host/{{.ID}}"
+                                                hx-target="#host-{{.ID}}"
+                                                hx-swap="outerHTML"
+                                                class="delete-host">Delete</button>
+                                    {{end}}
                                 </div>
                             </div>
                         {{end}}
@@ -136,10 +139,12 @@
                                     <p><strong>Role:</strong> {{.Role}}</p>
                                     <p>{{.Description}}</p>
                                     <a href="{{.Link}}" target="_blank">More Info</a>
-                                    <button hx-delete="/delete-host/{{.ID}}"
-                                            hx-target="#host-{{.ID}}"
-                                            hx-swap="outerHTML"
-                                            class="delete-host">Delete</button>
+                                    {{if $.IsAdmin}}
+                                        <button hx-delete="/delete-host/{{.ID}}"
+                                                hx-target="#host-{{.ID}}"
+                                                hx-swap="outerHTML"
+                                                class="delete-host">Delete</button>
+                                    {{end}}
                                 </div>
                             </div>
                         {{end}}
@@ -147,22 +152,61 @@
                 {{else}}
                     <p>No hosts or guests found for this podcast.</p>
                 {{end}}
-                <h2>Add New Host/Guest</h2>
-                <form hx-post="/add-host" hx-target="#host-list" hx-swap="beforeend">
-                    <input type="hidden" name="podcastId" value="{{.Podcast.ID}}">
-                    <input type="text" name="name" placeholder="Name" required>
-                    <select name="role" required>
-                        <option value="">Select Role</option>
-                        <option value="Host">Host</option>
-                        <option value="Guest">Guest</option>
-                    </select>
-                    <textarea name="description" placeholder="Description" required></textarea>
-                    <input type="url" name="link" placeholder="Link (Wiki, Github, etc.)" required>
-                    <input type="url" name="img" placeholder="Image URL (optional)">
-                    <button type="submit">Add Host/Guest</button>
-                </form>
+ 
+                <div class="add-host-section">
+                    <h2>Add New Host/Guest</h2>
+                    <form hx-post="/add-host" hx-target="#pending-hosts" hx-swap="none">
+                        <input type="hidden" name="podcastId" value="{{.Podcast.ID}}">
+                        <input type="text" name="name" placeholder="Name" required>
+                        <select name="role" required>
+                            <option value="">Select Role</option>
+                            <option value="Host">Host</option>
+                            <option value="Guest">Guest</option>
+                        </select>
+                        <textarea name="description" placeholder="Description" required></textarea>
+                        <input type="url" name="link" placeholder="Link (Wiki, Github, etc.)" required>
+                        <input type="url" name="img" placeholder="Image URL (optional)">
+                        <button type="submit">Add Host/Guest</button>
+                    </form>
+                </div>
+
+                <div id="pending-hosts">
+                    <!-- Newly submitted hosts will be added here -->
+                </div>
             {{end}}
         </div>
     </div>
+
+    <template id="pending-host-template">
+        <div class="host-item pending-host">
+            <span class="pending-label">Pending Approval</span>
+            <img src="${img}" alt="${name}" class="host-image" onerror="handleImageError(this)">
+            <div class="host-info">
+                <h3>${name}</h3>
+                <p><strong>Role:</strong> ${role}</p>
+                <p>${description}</p>
+                <a href="${link}" target="_blank">More Info</a>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.target.id === 'pending-hosts') {
+                const template = document.getElementById('pending-host-template');
+                const newHost = JSON.parse(event.detail.xhr.response);
+                const pendingHost = document.createElement('div');
+                pendingHost.innerHTML = template.innerHTML;
+                
+                pendingHost.querySelector('img').src = newHost.img || '/static/default-avatar.png';
+                pendingHost.querySelector('h3').textContent = newHost.name;
+                pendingHost.querySelector('p strong').nextSibling.textContent = ' ' + newHost.role;
+                pendingHost.querySelector('p:nth-of-type(2)').textContent = newHost.description;
+                pendingHost.querySelector('a').href = newHost.link;
+
+                event.detail.target.appendChild(pendingHost.firstElementChild);
+            }
+        });
+    </script>
 </body>
 </html>
