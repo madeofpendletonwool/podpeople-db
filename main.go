@@ -47,13 +47,15 @@ type Podcast struct {
 }
 
 type Host struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Role        string `json:"role"`
-	Description string `json:"description"`
-	Link        string `json:"link"`
-	Img         string `json:"img"`
-	PodcastID   int    `json:"podcastId"`
+	ID           int       `json:"id"`
+	Name         string    `json:"name"`
+	Role         string    `json:"role"`
+	Description  string    `json:"description"`
+	Link         string    `json:"link"`
+	Img          string    `json:"img"`
+	PodcastID    int       `json:"podcastId"`
+	PodcastTitle string    `json:"podcastTitle"` // Added field
+	CreatedAt    time.Time `json:"createdAt"`
 }
 
 type Admin struct {
@@ -66,6 +68,8 @@ var (
 	db        *sql.DB
 	templates *template.Template
 	store     = sessions.NewCookieStore([]byte("secret-key"))
+	ntfyURL   = os.Getenv("NTFY_URL")   // e.g., "https://ntfy.sh"
+	ntfyTopic = os.Getenv("NTFY_TOPIC") // e.g., "podpeople-notifications"
 )
 
 func main() {
@@ -100,6 +104,8 @@ func main() {
 	// API routes
 	r.HandleFunc("/api/podcast/{id}", getPodcastFromIndexAPI)
 	r.HandleFunc("/api/hosts/{id}", getHostsAPI)
+	r.HandleFunc("/api/download-database", downloadDatabaseHandler)
+	r.HandleFunc("/api/recent-hosts", getRecentHostsHandler)
 
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
@@ -117,7 +123,9 @@ func initDB() {
             link TEXT,
             img TEXT,
             podcast_id INTEGER,
-            status TEXT DEFAULT 'pending'
+            podcast_title TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -259,8 +267,62 @@ func rejectHostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendNotificationToAdmin(host Host) {
-	// Implement your notification system here (e.g., email, push notification)
-	log.Printf("New host submission: %s for podcast %d", host.Name, host.PodcastID)
+	if ntfyURL == "" || ntfyTopic == "" {
+		log.Printf("NTFY_URL or NTFY_TOPIC not set, skipping notification for host: %s", host.Name)
+		return
+	}
+
+	// Create notification message with markdown
+	message := fmt.Sprintf(`New host submission requires approval:
+
+**Host:** %s
+**Role:** %s
+**Podcast:** %s
+**Description:** %s
+`, host.Name, host.Role, host.PodcastTitle, host.Description)
+
+	// Build the notification URL
+	notificationURL := fmt.Sprintf("%s/%s", ntfyURL, ntfyTopic)
+
+	// Create the request
+	req, err := http.NewRequest("POST", notificationURL, bytes.NewBufferString(message))
+	if err != nil {
+		log.Printf("Error creating notification request: %v", err)
+		return
+	}
+
+	// Set headers for a rich notification
+	req.Header.Set("Title", "New Host Submission 🎙️")
+	req.Header.Set("Priority", "high")
+	req.Header.Set("Tags", "new,microphone,user")
+	req.Header.Set("Click", fmt.Sprintf("%s/admin/dashboard", os.Getenv("BASE_URL")))
+	req.Header.Set("Markdown", "yes")
+
+	// If host has an image, attach it
+	if host.Img != "" {
+		req.Header.Set("Attach", host.Img)
+	}
+
+	// Create action button for quick approval
+	actionURL := fmt.Sprintf("%s/admin/approve/%d", os.Getenv("BASE_URL"), host.ID)
+	req.Header.Set("Actions", fmt.Sprintf("http, Approve, %s, method=POST", actionURL))
+
+	// Send the notification
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error sending notification: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		log.Printf("Error response from ntfy: %s, %s", resp.Status, string(body))
+		return
+	}
+
+	log.Printf("Successfully sent notification for host: %s", host.Name)
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -370,17 +432,29 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 		imgURL = "" // Clear the URL if it's invalid
 	}
 
-	host := Host{
-		Name:        r.Form.Get("name"),
-		Role:        r.Form.Get("role"),
-		Description: r.Form.Get("description"),
-		Link:        r.Form.Get("link"),
-		Img:         imgURL,
-		PodcastID:   podcastID,
+	podcast, err := getPodcastDetails(strconv.Itoa(podcastID))
+	if err != nil {
+		http.Error(w, "Unable to fetch podcast details", http.StatusInternalServerError)
+		return
 	}
 
-	result, err := db.Exec("INSERT INTO hosts (name, role, description, link, img, podcast_id, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
-		host.Name, host.Role, host.Description, host.Link, host.Img, host.PodcastID)
+	host := Host{
+		Name:         r.Form.Get("name"),
+		Role:         r.Form.Get("role"),
+		Description:  r.Form.Get("description"),
+		Link:         r.Form.Get("link"),
+		Img:          imgURL,
+		PodcastID:    podcastID,
+		PodcastTitle: podcast.Title, // Store the podcast title
+	}
+
+	result, err := db.Exec(`
+        INSERT INTO hosts (
+            name, role, description, link, img, podcast_id, podcast_title, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+		host.Name, host.Role, host.Description, host.Link, host.Img,
+		host.PodcastID, host.PodcastTitle,
+	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -389,10 +463,8 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 	hostID, _ := result.LastInsertId()
 	host.ID = int(hostID)
 
-	// Send notification (implement this function)
 	sendNotificationToAdmin(host)
 
-	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(host)
 }
@@ -588,4 +660,87 @@ func getHostsAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(hosts)
+}
+
+func downloadDatabaseHandler(w http.ResponseWriter, r *http.Request) {
+	// Open the database file
+	dbPath := "/app/podpeople-data/podpeopledb.sqlite"
+	dbFile, err := os.Open(dbPath)
+	if err != nil {
+		http.Error(w, "Unable to open database file", http.StatusInternalServerError)
+		return
+	}
+	defer dbFile.Close()
+
+	// Get file info for size
+	fileInfo, err := dbFile.Stat()
+	if err != nil {
+		http.Error(w, "Unable to get file information", http.StatusInternalServerError)
+		return
+	}
+
+	// Set headers for file download
+	w.Header().Set("Content-Type", "application/x-sqlite3")
+	w.Header().Set("Content-Disposition", "attachment; filename=podpeopledb.sqlite")
+	w.Header().Set("Content-Length", strconv.FormatInt(fileInfo.Size(), 10))
+
+	// Copy the file to the response writer
+	_, err = io.Copy(w, dbFile)
+	if err != nil {
+		http.Error(w, "Error during file transfer", http.StatusInternalServerError)
+		return
+	}
+}
+
+type RecentHostsResponse struct {
+	Hosts    []Host `json:"hosts"`
+	Message  string `json:"message,omitempty"`
+	Count    int    `json:"count"`
+	MaxHosts int    `json:"maxHosts"`
+}
+
+func getRecentHostsHandler(w http.ResponseWriter, r *http.Request) {
+	const maxHosts = 6
+
+	rows, err := db.Query(`
+        SELECT id, name, role, img, podcast_id, podcast_title, created_at 
+        FROM hosts 
+        WHERE status = 'approved' 
+        ORDER BY created_at DESC 
+        LIMIT ?
+    `, maxHosts)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var hosts []Host
+	for rows.Next() {
+		var h Host
+		err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Img, &h.PodcastID, &h.PodcastTitle, &h.CreatedAt)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		hosts = append(hosts, h)
+	}
+
+	data := struct {
+		Hosts   []Host
+		Message string
+	}{
+		Hosts: hosts,
+	}
+
+	if len(hosts) == 0 {
+		data.Message = "No hosts have been added... yet!"
+	}
+
+	// Return HTML instead of JSON
+	err = templates.ExecuteTemplate(w, "recent_hosts.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
