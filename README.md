@@ -93,6 +93,5 @@ Please make sure to change the default admin credentials in production by settin
 ## ToDo
 
 - Additional Admin Users
-- Alert When new hosts added via html request
 - Add same user multiple pods
 - Add Episode specific entries

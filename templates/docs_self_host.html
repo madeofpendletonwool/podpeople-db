@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Hosting PodPeopleDB - Documentation</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="docs-container">
+        <div class="docs-header">
+            <a href="/" class="docs-home-link">
+                <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="docs-logo">
+            </a>
+            <h1>Self-Hosting PodPeopleDB</h1>
+        </div>
+        
+        <div class="docs-content">
+            <h2>Getting Started with Self-Hosting</h2>
+            
+            <p>PodPeopleDB is designed to be easily self-hosted using Docker and Docker Compose. This guide will walk you through setting up your own instance.</p>
+
+            <h3>Prerequisites</h3>
+            <ul>
+                <li>Docker and Docker Compose installed on your system</li>
+                <li>Basic understanding of Docker and container management</li>
+                <li>A server or machine that can run Docker containers</li>
+                <li>Access to a ntfy server for notifications (optional but recommended)</li>
+                <li>A current download of the sqllite database (if you want all the existing host data)</li>
+            </ul>
+
+            <h3>Quick Start</h3>
+            <ol>
+                <li>Clone the repository:
+                    <div class="code-example">
+                        <pre><code>git clone https://github.com/madeofpendletonwool/podpeople-db.git
+cd podpeople-db</code></pre>
+                    </div>
+                </li>
+                <li>Create your docker-compose.yml file:
+                    <div class="code-example">
+                        <pre><code>services:
+    podpeopledb:
+        image: madeofpendletonwool/podpeople_db:latest
+        ports:
+          - "8085:8085"
+        environment:
+          - ADMIN_USERNAME=your_admin_username
+          - ADMIN_PASSWORD=your_secure_password
+          - SEARCH_API_URL=https://my-podcast-index-backend:5000
+          - NTFY_URL=https://your-ntfy-instance
+          - NTFY_TOPIC=your-secret-topic
+          - BASE_URL=https://your-podpeople-domain.com
+        volumes:
+          - /path/to/your/data:/app/podpeople-data</code></pre>
+                    </div>
+                Note on the SEARCH_API_URL, that is how PodPeople accesses the PodcastIndex. For information on setting up that container. See <a href="https://github.com/madeofpendletonwool/PinePods/tree/main/Backend">here</a>
+                </li>
+            </ol>
+
+            <h3>Environment Variables</h3>
+            <table class="env-table">
+                <tr>
+                    <th>Variable</th>
+                    <th>Description</th>
+                    <th>Required</th>
+                </tr>
+                <tr>
+                    <td>ADMIN_USERNAME</td>
+                    <td>Username for the admin dashboard</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>ADMIN_PASSWORD</td>
+                    <td>Password for the admin dashboard</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>SEARCH_API_URL</td>
+                    <td>URL for the podcast search API</td>
+                    <td>Yes</td>
+                </tr>
+                <tr>
+                    <td>NTFY_URL</td>
+                    <td>Your ntfy server URL</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>NTFY_TOPIC</td>
+                    <td>Your ntfy topic for notifications</td>
+                    <td>No</td>
+                </tr>
+                <tr>
+                    <td>BASE_URL</td>
+                    <td>Your PodPeopleDB instance URL</td>
+                    <td>No</td>
+                </tr>
+            </table>
+
+            <h3>Setting Up Notifications</h3>
+            <p>PodPeopleDB uses ntfy for notifications about new host submissions. To set this up:</p>
+            <ol>
+                <li>Set up a ntfy server or use a public instance like ntfy.sh</li>
+                <li>Create a unique topic name that's not easily guessable</li>
+                <li>Configure the NTFY_URL and NTFY_TOPIC environment variables</li>
+                <li>Install the ntfy app on your mobile device</li>
+                <li>Subscribe to your topic in the app</li>
+            </ol>
+
+            <h3>Database Management</h3>
+            <p>The SQLite database is stored in the mounted volume at <code>/app/podpeople-data</code>. Important considerations:</p>
+            <ul>
+                <li>Regular backups are recommended</li>
+                <li>The database can be downloaded through the web interface</li>
+                <li>Database migrations happen automatically on startup</li>
+            </ul>
+
+            <h3>Security Considerations</h3>
+            <ul>
+                <li>Use a secure, random ntfy topic name</li>
+                <li>Keep your BASE_URL environment variable accurate for proper notifications</li>
+                <li>Consider using a reverse proxy with SSL</li>
+            </ul>
+
+            <h3>Updating PodPeopleDB</h3>
+            <div class="code-example">
+                <pre><code># Pull the latest image
+docker-compose pull
+
+# Restart the service
+docker-compose up -d</code></pre>
+            </div>
+
+            <h3>Troubleshooting</h3>
+            <ul>
+                <li>Check container logs: <code>docker-compose logs podpeopledb</code></li>
+                <li>Ensure all required environment variables are set</li>
+                <li>Verify your data directory has proper permissions</li>
+                <li>Check ntfy connectivity if notifications aren't working</li>
+                <li>Are you hosting your own Search API container? Is that for sure working correctly?</li>
+            </ul>
+
+            <div class="docs-nav">
+                <a href="/docs/integration" class="docs-nav-link prev">← Previous: Integration Guide</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

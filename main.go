@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -100,12 +102,29 @@ func main() {
 	r.HandleFunc("/admin/dashboard", adminAuthMiddleware(adminDashboardHandler))
 	r.HandleFunc("/admin/approve/{id}", adminAuthMiddleware(approveHostHandler)).Methods("POST")
 	r.HandleFunc("/admin/reject/{id}", adminAuthMiddleware(rejectHostHandler)).Methods("POST")
+	r.HandleFunc("/admin/auto-approve/{key}", autoApproveHandler).Methods("POST")
 
 	// API routes
 	r.HandleFunc("/api/podcast/{id}", getPodcastFromIndexAPI)
 	r.HandleFunc("/api/hosts/{id}", getHostsAPI)
 	r.HandleFunc("/api/download-database", downloadDatabaseHandler)
 	r.HandleFunc("/api/recent-hosts", getRecentHostsHandler)
+
+	// Docs Routes
+	r.HandleFunc("/docs/what-is-this-for", func(w http.ResponseWriter, r *http.Request) {
+		templates.ExecuteTemplate(w, "docs_what_is_this_for.html", nil)
+	})
+
+	r.HandleFunc("/docs/adding-hosts", func(w http.ResponseWriter, r *http.Request) {
+		templates.ExecuteTemplate(w, "docs_adding_hosts.html", nil)
+	})
+
+	r.HandleFunc("/docs/integration", func(w http.ResponseWriter, r *http.Request) {
+		templates.ExecuteTemplate(w, "docs_integration.html", nil)
+	})
+	r.HandleFunc("/docs/self-host", func(w http.ResponseWriter, r *http.Request) {
+		templates.ExecuteTemplate(w, "docs_self_host.html", nil)
+	})
 
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
@@ -125,6 +144,8 @@ func initDB() {
             podcast_id INTEGER,
             podcast_title TEXT,
             status TEXT DEFAULT 'pending',
+            approval_key TEXT UNIQUE,
+            approval_key_expires_at DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         CREATE TABLE IF NOT EXISTS admins (
@@ -168,6 +189,36 @@ func initDB() {
 
 		log.Printf("Admin user '%s' created successfully\n", username)
 	}
+}
+
+func generateApprovalKey() (string, error) {
+	bytes := make([]byte, 32) // 256 bits of randomness
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
+func createHostApprovalKey(hostID int) (string, error) {
+	key, err := generateApprovalKey()
+	if err != nil {
+		return "", err
+	}
+
+	// Set expiration time to 24 hours from now
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	_, err = db.Exec(`
+        UPDATE hosts 
+        SET approval_key = ?, approval_key_expires_at = ? 
+        WHERE id = ? AND status = 'pending'`,
+		key, expiresAt, hostID)
+
+	if err != nil {
+		return "", err
+	}
+
+	return key, nil
 }
 
 func adminAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -233,10 +284,35 @@ func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func approveHostHandler(w http.ResponseWriter, r *http.Request) {
+	// Must be a POST request
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Must be authenticated
+	session, _ := store.Get(r, "session")
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	hostID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		http.Error(w, "Invalid host ID", http.StatusBadRequest)
+		return
+	}
+
+	// Verify host exists and is pending
+	var status string
+	err = db.QueryRow("SELECT status FROM hosts WHERE id = ?", hostID).Scan(&status)
+	if err != nil {
+		http.Error(w, "Host not found", http.StatusNotFound)
+		return
+	}
+	if status != "pending" {
+		http.Error(w, "Host already processed", http.StatusBadRequest)
 		return
 	}
 
@@ -247,6 +323,36 @@ func approveHostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
+}
+
+// New handler for one-time approval links
+func autoApproveHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	key := vars["key"]
+
+	result, err := db.Exec(`
+        UPDATE hosts 
+        SET status = 'approved', 
+            approval_key = NULL, 
+            approval_key_expires_at = NULL 
+        WHERE approval_key = ? 
+        AND approval_key_expires_at > CURRENT_TIMESTAMP 
+        AND status = 'pending'`,
+		key)
+
+	if err != nil {
+		http.Error(w, "Failed to process approval", http.StatusInternalServerError)
+		return
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil || rows == 0 {
+		http.Error(w, "Invalid or expired approval key", http.StatusBadRequest)
+		return
+	}
+
+	// Redirect to a success page
+	http.Redirect(w, r, "/admin/approval-success", http.StatusSeeOther)
 }
 
 func rejectHostHandler(w http.ResponseWriter, r *http.Request) {
@@ -267,48 +373,61 @@ func rejectHostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendNotificationToAdmin(host Host) {
-	if ntfyURL == "" || ntfyTopic == "" {
-		log.Printf("NTFY_URL or NTFY_TOPIC not set, skipping notification for host: %s", host.Name)
+	// Generate approval key
+	approvalKey, err := createHostApprovalKey(host.ID)
+	if err != nil {
+		log.Printf("Error generating approval key: %v", err)
 		return
 	}
 
-	// Create notification message with markdown
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		log.Printf("BASE_URL not set, defaulting to http://localhost:8085")
+		baseURL = "http://localhost:8085"
+	}
+
 	message := fmt.Sprintf(`New host submission requires approval:
 
-**Host:** %s
-**Role:** %s
-**Podcast:** %s
-**Description:** %s
-`, host.Name, host.Role, host.PodcastTitle, host.Description)
+Host: %s
+Role: %s
+Podcast: %s
+Description: %s`,
+		host.Name,
+		host.Role,
+		host.PodcastTitle,
+		host.Description,
+	)
 
-	// Build the notification URL
 	notificationURL := fmt.Sprintf("%s/%s", ntfyURL, ntfyTopic)
-
-	// Create the request
 	req, err := http.NewRequest("POST", notificationURL, bytes.NewBufferString(message))
 	if err != nil {
 		log.Printf("Error creating notification request: %v", err)
 		return
 	}
 
-	// Set headers for a rich notification
-	req.Header.Set("Title", "New Host Submission 🎙️")
-	req.Header.Set("Priority", "high")
-	req.Header.Set("Tags", "new,microphone,user")
-	req.Header.Set("Click", fmt.Sprintf("%s/admin/dashboard", os.Getenv("BASE_URL")))
-	req.Header.Set("Markdown", "yes")
+	// Set the one-time approval link
+	approvalURL := fmt.Sprintf("%s/admin/auto-approve/%s", baseURL, approvalKey)
 
-	// If host has an image, attach it
+	req.Header.Set("Title", "New Host Submission 🎙️")
+	req.Header.Set("Priority", "default")
+	req.Header.Set("Tags", "new,microphone,user")
+	req.Header.Set("Click", fmt.Sprintf("%s/admin/dashboard", baseURL))
+
 	if host.Img != "" {
 		req.Header.Set("Attach", host.Img)
 	}
 
-	// Create action button for quick approval
-	actionURL := fmt.Sprintf("%s/admin/approve/%d", os.Getenv("BASE_URL"), host.ID)
-	req.Header.Set("Actions", fmt.Sprintf("http, Approve, %s, method=POST", actionURL))
+	// Set one-time approval action
+	req.Header.Set("Actions", fmt.Sprintf("http, Approve, %s, method=POST", approvalURL))
 
 	// Send the notification
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("Error sending notification: %v", err)

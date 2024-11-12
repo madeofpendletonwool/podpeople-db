@@ -1,0 +1,58 @@
+{{/* templates/docs_adding_hosts.html */}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adding Hosts - PodPeopleDB Documentation</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="docs-container">
+        <div class="docs-header">
+            <a href="/" class="docs-home-link">
+                <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="docs-logo">
+            </a>
+            <h1>Adding Hosts and Guests</h1>
+        </div>
+        
+        <div class="docs-content">
+            <h2>Contributing to PodPeopleDB</h2>
+
+            <h3>Automatic Import via podcast:person Tags</h3>
+            <p>PodPeopleDB automatically imports host and guest information from podcast feeds that use the podcast:person namespace. If your podcast uses these tags, your host information will be automatically imported when someone looks up your podcast.</p>
+
+            <div class="code-example">
+                <pre><code>&lt;podcast:person role="host" img="http://example.com/host.jpg"&gt;Jane Smith&lt;/podcast:person&gt;</code></pre>
+            </div>
+
+            <h3>Manual Submission</h3>
+            <p>For podcasts that don't use the podcast:person tag, you can manually submit host information:</p>
+            
+            <ol>
+                <li>Enter your Podcast Index Feed ID on the homepage</li>
+                <li>Click on "Add New Host/Guest" on the podcast page</li>
+                <li>Fill in the host details:
+                    <ul>
+                        <li>Name (required)</li>
+                        <li>Role (Host or Guest)</li>
+                        <li>Description</li>
+                        <li>Link to more information</li>
+                        <li>Profile image URL</li>
+                    </ul>
+                </li>
+                <li>Submit for approval</li>
+            </ol>
+
+            <h3>Approval Process</h3>
+            <p>To maintain data quality, all manual submissions are reviewed before being added to the database. This typically takes an hour or two at most. If you'd prefer to add your own hosts without approval you can always <a href="/docs/self-host">self-host</a> PodPeopleDB if you'd prefer.</p>
+
+            <div class="docs-nav">
+                <a href="/docs/what-is-this-for" class="docs-nav-link prev">← Previous: What is PodPeopleDB</a>
+                <a href="/docs/integration" class="docs-nav-link">Next: Integration Guide →</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

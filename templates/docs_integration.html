@@ -1,0 +1,75 @@
+{{/* templates/docs_integration.html */}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Guide - PodPeopleDB Documentation</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="docs-container">
+        <div class="docs-header">
+            <a href="/" class="docs-home-link">
+                <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="docs-logo">
+            </a>
+            <h1>Integrating PodPeopleDB Into Your App</h1>
+        </div>
+        
+        <div class="docs-content">
+            <h2>API Documentation</h2>
+
+            <h3>Available Endpoints</h3>
+            <div class="endpoint-section">
+                <h4>Get Podcast Host Information</h4>
+                <pre><code>GET /api/podcast/{id}</code></pre>
+                <p>Returns host information for a specific podcast using the Podcast Index Feed ID.</p>
+                
+                <h4>Get Host Details</h4>
+                <pre><code>GET /api/hosts/{id}</code></pre>
+                <p>Returns detailed information about hosts associated with a podcast.</p>
+
+                <h4>Download Database</h4>
+                <pre><code>GET /api/download-database</code></pre>
+                <p>Downloads the entire SQLite database for offline use.</p>
+            </div>
+
+            <h3>Database Schema</h3>
+            <p>The SQLite database includes the following tables:</p>
+            <div class="code-example">
+                <pre><code>CREATE TABLE hosts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    role TEXT,
+    description TEXT,
+    link TEXT,
+    img TEXT,
+    podcast_id INTEGER,
+    podcast_title TEXT,
+    status TEXT,
+    created_at DATETIME
+);</code></pre>
+            </div>
+
+            <h3>Example Integration</h3>
+            <div class="code-example">
+                <pre><code>// Example JavaScript code
+async function getPodcastHosts(podcastId) {
+    const response = await fetch(`https://api.podpeople.db/podcast/${podcastId}`);
+    const data = await response.json();
+    return data.hosts;
+}</code></pre>
+            </div>
+
+            <h3>Rate Limits</h3>
+            <p>Currently, there are no rate limits in place, but please be considerate with your API usage.</p>
+
+            <div class="docs-nav">
+                <a href="/docs/adding-hosts" class="docs-nav-link prev">← Previous: Adding Hosts and Guests</a>
+                <a href="/docs/self-host" class="docs-nav-link">Next: Self-Host PodPeopleDB →</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

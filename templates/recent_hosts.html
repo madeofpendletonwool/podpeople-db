@@ -5,7 +5,7 @@
     <div class="host-card">
         <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}" 
              alt="{{.Name}}" 
-             onerror="this.src='/static/default-avatar.png'">
+             onerror="this.onerror=null; this.src='/static/default-avatar.png'; return true;">
         <h3>{{.Name}}</h3>
         <p class="host-role">{{.Role}}</p>
         <p class="podcast-title">{{.PodcastTitle}}</p>

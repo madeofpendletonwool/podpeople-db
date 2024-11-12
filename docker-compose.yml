@@ -1,0 +1,13 @@
+services:
+    podpeopledb:
+        image: madeofpendletonwool/podpeople_db:latest
+        ports:
+          - "8085:8085"
+        environment:
+          - NTFY_URL="https://ntfy.sh"
+          - NTFY_TOPIC="your-secret-topic"
+          - ADMIN_USERNAME=admin
+          - ADMIN_PASSWORD=password
+          - SEARCH_API_URL=https://search.pinepods.online
+        volumes:
+          - /home/user/podpeople-data:/app/podpeople-data
