@@ -104,6 +104,8 @@ func main() {
 	r.HandleFunc("/search-hosts", searchHostsHandler)
 	r.HandleFunc("/get-host-details", getHostDetailsHandler)
 	r.HandleFunc("/delete-host/{id}", adminAuthMiddleware(deleteHostHandler)).Methods("DELETE")
+	r.HandleFunc("/proxy-image", proxyImageHandler)
+	r.HandleFunc("/edit-host", adminAuthMiddleware(editHostHandler)).Methods("PUT")
 
 	// Admin routes
 	r.HandleFunc("/admin/login", adminLoginHandler).Methods("GET", "POST")
@@ -1217,4 +1219,105 @@ func getHostWithPodcasts(hostID int) (Host, error) {
 	}
 
 	return host, nil
+}
+
+// Add this handler
+func proxyImageHandler(w http.ResponseWriter, r *http.Request) {
+	imageURL := r.URL.Query().Get("url")
+	if imageURL == "" {
+		http.Error(w, "No image URL provided", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := http.Get(imageURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Copy the content type
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+
+	// Copy the image data
+	io.Copy(w, resp.Body)
+}
+
+func editHostHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if user is admin
+	session, _ := store.Get(r, "session")
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	hostID, _ := strconv.Atoi(r.Form.Get("hostId"))
+
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Update host details
+	_, err = tx.Exec(`
+        UPDATE hosts 
+        SET name = ?, description = ?, link = ?, img = ?
+        WHERE id = ?`,
+		r.Form.Get("name"),
+		r.Form.Get("description"),
+		r.Form.Get("link"),
+		r.Form.Get("img"),
+		hostID,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Update role in host_podcasts table
+	_, err = tx.Exec(`
+        UPDATE host_podcasts
+        SET role = ?
+        WHERE host_id = ?`,
+		r.Form.Get("role"),
+		hostID,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return updated host data
+	host, err := getHostWithPodcasts(hostID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the updated host HTML
+	err = templates.ExecuteTemplate(w, "host-item", host)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

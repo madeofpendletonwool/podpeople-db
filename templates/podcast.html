@@ -124,7 +124,7 @@
                     {{range .Podcasts}}
                         {{if eq .Role "Host"}}
                             <div class="host-item" id="host-{{$host.ID}}">
-                                <img src="{{if $host.Img}}{{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                <img src="{{if $host.Img}}/proxy-image?url={{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
                                      alt="{{$host.Name}}"
                                      class="host-image"
                                      onerror="handleImageError(this)">
@@ -134,10 +134,14 @@
                                     <p>{{$host.Description}}</p>
                                     <a href="{{$host.Link}}" target="_blank">More Info</a>
                                     {{if $.IsAdmin}}
-                                        <button hx-delete="/delete-host/{{$host.ID}}"
-                                                hx-target="#host-{{$host.ID}}"
-                                                hx-swap="outerHTML"
-                                                class="delete-host">Delete</button>
+                                        <div class="admin-actions">
+                                            <button onclick="openEditModal({{$host.ID}}, '{{$host.Name}}', '{{$host.Description}}', '{{$host.Link}}', '{{$host.Img}}', '{{.Role}}')"
+                                                    class="edit-host">Edit</button>
+                                            <button hx-delete="/delete-host/{{$host.ID}}"
+                                                    hx-target="#host-{{$host.ID}}"
+                                                    hx-swap="outerHTML"
+                                                    class="delete-host">Delete</button>
+                                        </div>
                                     {{end}}
                                 </div>
                             </div>
@@ -151,7 +155,7 @@
                     {{range .Podcasts}}
                         {{if eq .Role "Guest"}}
                             <div class="host-item" id="host-{{$host.ID}}">
-                                <img src="{{if $host.Img}}{{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                <img src="{{if $host.Img}}/proxy-image?url={{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
                                      alt="{{$host.Name}}"
                                      class="host-image"
                                      onerror="handleImageError(this)">
@@ -218,7 +222,11 @@
     <template id="pending-host-template">
         <div class="host-item pending-host">
             <span class="pending-label">Pending Approval</span>
-            <img src="${img}" alt="${name}" class="host-image" onerror="handleImageError(this)">
+            <img 
+            src="/proxy-image?url=${img || '/static/default-avatar.png'}" 
+            alt="${name}" 
+            class="host-image" 
+            onerror="this.onerror=null; this.src='/static/default-avatar.png'">
             <div class="host-info">
                 <h3>${name}</h3>
                 <p><strong>Role:</strong> ${role}</p>
@@ -227,6 +235,31 @@
             </div>
         </div>
     </template>
+
+    <div id="edit-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Host</h2>
+            <form id="edit-host-form" 
+                  hx-put="/edit-host" 
+                  hx-target=""
+                  hx-swap="outerHTML">
+                <input type="hidden" name="hostId" id="edit-host-id">
+                <input type="text" name="name" id="edit-name" placeholder="Name" required>
+                <select name="role" id="edit-role" required>
+                    <option value="Host">Host</option>
+                    <option value="Guest">Guest</option>
+                </select>
+                <textarea name="description" id="edit-description" placeholder="Description" required></textarea>
+                <input type="url" name="link" id="edit-link" placeholder="Link (Wiki, Github, etc.)" required>
+                <input type="url" name="img" id="edit-img" placeholder="Image URL (optional)">
+                <div class="modal-buttons">
+                    <button type="button" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
     
     <script src="/static/js/search-dropdown.js"></script>
     <script>
@@ -289,6 +322,42 @@
                 document.querySelector('#search-results').classList.add('hidden');
             }
         });
+
+        function openEditModal(id, name, description, link, img, role) {
+            const modal = document.getElementById('edit-modal');
+            const form = document.getElementById('edit-host-form');
+            
+            // Set the target dynamically
+            form.setAttribute('hx-target', `#host-${id}`);
+            
+            // Set the form values
+            document.getElementById('edit-host-id').value = id;
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-role').value = role;
+            document.getElementById('edit-description').value = description;
+            document.getElementById('edit-link').value = link;
+            document.getElementById('edit-img').value = img || '';
+            
+            modal.style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('edit-modal');
+            if (event.target == modal) {
+                closeEditModal();
+            }
+        }
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.elt.id === 'edit-host-form' && event.detail.xhr.status === 200) {
+            closeEditModal();
+            // Optional: Add a success message or notification
+        }
+    });
     </script>
 </body>
 </html>

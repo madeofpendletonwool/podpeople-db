@@ -3,7 +3,7 @@
 {{else}}
     {{range .Hosts}}
         <div class="host-card">
-            <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+            <img src="{{if .Img}}/proxy-image?url={{.Img}}{{else}}/static/default-avatar.png{{end}}"
                  alt="{{.Name}}"
                  onerror="this.onerror=null; this.src='/static/default-avatar.png'; return true;">
             <h3>{{.Name}}</h3>

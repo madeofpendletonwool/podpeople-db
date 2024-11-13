@@ -9,14 +9,16 @@
 </head>
 <body>
     <div class="container">
-        <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
+        <a href="/" class="docs-home-link">
+            <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
+        </a>
         <h1>Admin Dashboard</h1>
         <h2>Pending Host Submissions</h2>
         <div id="pending-hosts-list">
             {{if .}}
                 {{range .}}
                     <div class="host-item pending-host" id="host-{{.ID}}">
-                        <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                        <img src="{{if .Img}}/proxy-image?url={{.Img}}{{else}}/static/default-avatar.png{{end}}"
                              alt="{{.Name}}"
                              class="host-image"
                              onerror="this.onerror=null; this.src='/static/default-avatar.png';">

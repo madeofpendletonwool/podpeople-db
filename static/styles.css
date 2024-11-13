@@ -329,6 +329,9 @@ form {
     width: 100%;
     max-width: 300px;
     transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;           /* Add flex display */
+    flex-direction: column;  /* Stack items vertically */
+    align-items: center;     /* Center items horizontally */
 }
 
 .host-card:hover {
@@ -337,17 +340,32 @@ form {
 }
 
 .host-card img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 5px;
+    width: 100px;           /* Fixed width */
+    height: 100px;          /* Fixed height - same as width for perfect circle */
+    object-fit: cover;      /* Maintain aspect ratio */
+    border-radius: 50%;     /* Make it circular */
     margin-bottom: 0.5rem;
+    object-position: center; /* Center the image */
+    border: 2px solid #4a90e2; /* Optional: adds a nice border */
 }
 
 .host-card h3 {
     color: #fff;
     margin: 0.5rem 0;
     font-size: 1.1rem;
+    text-align: center;    /* Center the name */
+}
+
+/* Add these for the role and title */
+.host-card .host-role,
+.host-card .podcast-title {
+    text-align: center;    /* Center the text */
+    margin: 0.25rem 0;     /* Add some spacing */
+    color: #aaa;          /* Lighter color for secondary info */
+}
+
+.host-card .podcast-title {
+    font-style: italic;    /* Make the podcast title italic */
 }
 
 .host-role {
@@ -687,4 +705,65 @@ input[name="name"] {
 #search-results.hidden {
     opacity: 0;
     pointer-events: none;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #1a1a1a;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    margin: 0 auto;  /* Center the modal */
+    transform: translateY(0);  /* Prevent right shift */
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #fff;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.edit-host {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-top: 10px;
+    width: auto;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
 }
