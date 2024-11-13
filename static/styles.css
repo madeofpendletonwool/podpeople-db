@@ -591,3 +591,100 @@ form {
     padding: 1rem;
     line-height: 1.5;
 }
+
+
+
+/* Search results container */
+#search-results {
+    position: absolute;
+    width: 100%;
+    margin-top: 4px;
+    background-color: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 50;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+/* Individual suggestion items */
+.suggestion-item {
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #374151;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.highlighted {
+    background-color: #374151;
+}
+
+/* Image styling */
+.suggestion-item img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Text content styling */
+.suggestion-item .text-white {
+    color: #f3f4f6;
+    margin-bottom: 2px;
+}
+
+.suggestion-item .text-gray-400 {
+    color: #9ca3af;
+}
+
+/* Scrollbar styling */
+#search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+#search-results::-webkit-scrollbar-track {
+    background: #1f2937;
+    border-radius: 0 6px 6px 0;
+}
+
+#search-results::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+
+#search-results::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
+/* Add styles for the highlighted state */
+.suggestion-item.highlighted {
+    background-color: #374151;
+    outline: none;
+}
+
+/* Ensure the dropdown is above other content */
+.relative {
+    position: relative;
+}
+
+/* Make sure the form input has a consistent style */
+input[name="name"] {
+    position: relative;
+    z-index: 1;
+}
+
+/* Animation for showing/hiding suggestions */
+#search-results {
+    transition: opacity 0.15s ease-in-out;
+    opacity: 1;
+}
+
+#search-results.hidden {
+    opacity: 0;
+    pointer-events: none;
+}

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Podcast.Title}} - PodPeopleDB</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" type="image/x-icon" href="/static/podpeople.ico">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
     <script>
@@ -24,7 +25,9 @@
 </head>
 <body>
     <div class="container">
-        <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
+        <a href="/" class="docs-home-link">
+            <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
+        </a>
         <h1>{{.Podcast.Title}}</h1>
         <img src="{{.Podcast.Image}}" alt="{{.Podcast.Title}} Artwork" class="podcast-image">
         <div class="podcast-info">
@@ -37,127 +40,162 @@
         <h2>Hosts and Guests</h2>
         <div id="host-list">
             {{if .PersonTags}}
-                <h3>Hosts</h3>
-                {{range .Podcast.Hosts}}
-                    {{if eq .Role "Host"}}
-                        <div class="host-item">
-                            <img src="{{.Img}}" alt="{{.Name}}" class="host-image" onerror="handleImageError(this)">
-                            <div class="host-info">
-                                <h3>{{.Name}}</h3>
-                                <p><strong>Role:</strong> {{.Role}}</p>
-                                {{if .Group}}<p><strong>Group:</strong> {{.Group}}</p>{{end}}
-                                {{if .Href}}<a href="{{.Href}}" target="_blank">More Info</a>{{end}}
-                                {{if .Episodes}}
-                                    {{if gt (len .Episodes) 5}}
-                                        <p><strong>Associated Episodes:</strong> <a href="#" onclick="toggleEpisodes('{{.Name}}'); return false;">Show/Hide ({{len .Episodes}} episodes)</a></p>
-                                        <ul id="episodes-{{.Name}}" style="display: none;">
-                                            {{range .Episodes}}
-                                                <li>{{.}}</li>
-                                            {{end}}
-                                        </ul>
-                                    {{else}}
-                                        <p><strong>Associated Episodes:</strong></p>
-                                        <ul>
-                                            {{range .Episodes}}
-                                                <li>{{.}}</li>
-                                            {{end}}
-                                        </ul>
-                                    {{end}}
+            <h3>Hosts</h3>
+            {{range .Podcast.Hosts}}
+                {{if eq .Role "Host"}}
+                    <div class="host-item">
+                        <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                             alt="{{.Name}}"
+                             class="host-image"
+                             onerror="handleImageError(this)">
+                        <div class="host-info">
+                            <h3>{{.Name}}</h3>
+                            <p><strong>Role:</strong> {{.Role}}</p>
+                            {{if .Group}}<p><strong>Group:</strong> {{.Group}}</p>{{end}}
+                            {{if .Href}}<a href="{{.Href}}" target="_blank">More Info</a>{{end}}
+                            {{if .Episodes}}
+                                {{if gt (len .Episodes) 5}}
+                                    <p><strong>Associated Episodes:</strong> 
+                                        <a href="#" onclick="toggleEpisodes('{{.Name}}'); return false;">
+                                            Show/Hide ({{len .Episodes}} episodes)
+                                        </a>
+                                    </p>
+                                    <ul id="episodes-{{.Name}}" style="display: none;">
+                                        {{range .Episodes}}
+                                            <li>{{.}}</li>
+                                        {{end}}
+                                    </ul>
+                                {{else}}
+                                    <p><strong>Associated Episodes:</strong></p>
+                                    <ul>
+                                        {{range .Episodes}}
+                                            <li>{{.}}</li>
+                                        {{end}}
+                                    </ul>
                                 {{end}}
-                            </div>
+                            {{end}}
                         </div>
+                    </div>
+                {{end}}
+            {{end}}
+                
+            <h3>Guests</h3>
+            {{range .Podcast.Hosts}}
+                {{if eq .Role "Guest"}}
+                    <div class="host-item">
+                        <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                             alt="{{.Name}}"
+                             class="host-image"
+                             onerror="handleImageError(this)">
+                        <div class="host-info">
+                            <h3>{{.Name}}</h3>
+                            <p><strong>Role:</strong> {{.Role}}</p>
+                            {{if .Group}}<p><strong>Group:</strong> {{.Group}}</p>{{end}}
+                            {{if .Href}}<a href="{{.Href}}" target="_blank">More Info</a>{{end}}
+                            {{if .Episodes}}
+                                {{if gt (len .Episodes) 5}}
+                                    <p><strong>Associated Episodes:</strong> 
+                                        <a href="#" onclick="toggleEpisodes('{{.Name}}'); return false;">
+                                            Show/Hide ({{len .Episodes}} episodes)
+                                        </a>
+                                    </p>
+                                    <ul id="episodes-{{.Name}}" style="display: none;">
+                                        {{range .Episodes}}
+                                            <li>{{.}}</li>
+                                        {{end}}
+                                    </ul>
+                                {{else}}
+                                    <p><strong>Associated Episodes:</strong></p>
+                                    <ul>
+                                        {{range .Episodes}}
+                                            <li>{{.}}</li>
+                                        {{end}}
+                                    </ul>
+                                {{end}}
+                            {{end}}
+                        </div>
+                    </div>
+                {{end}}
+            {{end}}
+                {{else}}
+                {{if .Hosts}}
+                <h3>Hosts</h3>
+                {{range $host := .Hosts}}
+                    {{range .Podcasts}}
+                        {{if eq .Role "Host"}}
+                            <div class="host-item" id="host-{{$host.ID}}">
+                                <img src="{{if $host.Img}}{{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                     alt="{{$host.Name}}"
+                                     class="host-image"
+                                     onerror="handleImageError(this)">
+                                <div class="host-info">
+                                    <h3>{{$host.Name}}</h3>
+                                    <p><strong>Role:</strong> {{.Role}}</p>
+                                    <p>{{$host.Description}}</p>
+                                    <a href="{{$host.Link}}" target="_blank">More Info</a>
+                                    {{if $.IsAdmin}}
+                                        <button hx-delete="/delete-host/{{$host.ID}}"
+                                                hx-target="#host-{{$host.ID}}"
+                                                hx-swap="outerHTML"
+                                                class="delete-host">Delete</button>
+                                    {{end}}
+                                </div>
+                            </div>
+                        {{end}}
+                        {{break}}
                     {{end}}
                 {{end}}
                 
                 <h3>Guests</h3>
-                {{range .Podcast.Hosts}}
-                    {{if eq .Role "Guest"}}
-                        <div class="host-item">
-                            <img src="{{.Img}}" alt="{{.Name}}" class="host-image" onerror="handleImageError(this)">
-                            <div class="host-info">
-                                <h3>{{.Name}}</h3>
-                                <p><strong>Role:</strong> {{.Role}}</p>
-                                {{if .Group}}<p><strong>Group:</strong> {{.Group}}</p>{{end}}
-                                {{if .Href}}<a href="{{.Href}}" target="_blank">More Info</a>{{end}}
-                                {{if .Episodes}}
-                                    {{if gt (len .Episodes) 5}}
-                                        <p><strong>Associated Episodes:</strong> <a href="#" onclick="toggleEpisodes('{{.Name}}'); return false;">Show/Hide ({{len .Episodes}} episodes)</a></p>
-                                        <ul id="episodes-{{.Name}}" style="display: none;">
-                                            {{range .Episodes}}
-                                                <li>{{.}}</li>
-                                            {{end}}
-                                        </ul>
-                                    {{else}}
-                                        <p><strong>Associated Episodes:</strong></p>
-                                        <ul>
-                                            {{range .Episodes}}
-                                                <li>{{.}}</li>
-                                            {{end}}
-                                        </ul>
+                {{range $host := .Hosts}}
+                    {{range .Podcasts}}
+                        {{if eq .Role "Guest"}}
+                            <div class="host-item" id="host-{{$host.ID}}">
+                                <img src="{{if $host.Img}}{{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                     alt="{{$host.Name}}"
+                                     class="host-image"
+                                     onerror="handleImageError(this)">
+                                <div class="host-info">
+                                    <h3>{{$host.Name}}</h3>
+                                    <p><strong>Role:</strong> {{.Role}}</p>
+                                    <p>{{$host.Description}}</p>
+                                    <a href="{{$host.Link}}" target="_blank">More Info</a>
+                                    {{if $.IsAdmin}}
+                                        <button hx-delete="/delete-host/{{$host.ID}}"
+                                                hx-target="#host-{{$host.ID}}"
+                                                hx-swap="outerHTML"
+                                                class="delete-host">Delete</button>
                                     {{end}}
-                                {{end}}
+                                </div>
                             </div>
-                        </div>
+                        {{end}}
+                        {{break}}
                     {{end}}
                 {{end}}
-                {{else}}
-                {{if .Hosts}}
-                    <h3>Hosts</h3>
-                    {{range .Hosts}}
-                        {{if eq .Role "Host"}}
-                            <div class="host-item" id="host-{{.ID}}">
-                                <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
-                                     alt="{{.Name}}"
-                                     class="host-image"
-                                     onerror="handleImageError(this)">
-                                <div class="host-info">
-                                    <h3>{{.Name}}</h3>
-                                    <p><strong>Role:</strong> {{.Role}}</p>
-                                    <p>{{.Description}}</p>
-                                    <a href="{{.Link}}" target="_blank">More Info</a>
-                                    {{if $.IsAdmin}}
-                                        <button hx-delete="/delete-host/{{.ID}}"
-                                                hx-target="#host-{{.ID}}"
-                                                hx-swap="outerHTML"
-                                                class="delete-host">Delete</button>
-                                    {{end}}
-                                </div>
-                            </div>
-                        {{end}}
-                    {{end}}
-                    
-                    <h3>Guests</h3>
-                    {{range .Hosts}}
-                        {{if eq .Role "Guest"}}
-                            <div class="host-item" id="host-{{.ID}}">
-                                <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
-                                     alt="{{.Name}}"
-                                     class="host-image"
-                                     onerror="handleImageError(this)">
-                                <div class="host-info">
-                                    <h3>{{.Name}}</h3>
-                                    <p><strong>Role:</strong> {{.Role}}</p>
-                                    <p>{{.Description}}</p>
-                                    <a href="{{.Link}}" target="_blank">More Info</a>
-                                    {{if $.IsAdmin}}
-                                        <button hx-delete="/delete-host/{{.ID}}"
-                                                hx-target="#host-{{.ID}}"
-                                                hx-swap="outerHTML"
-                                                class="delete-host">Delete</button>
-                                    {{end}}
-                                </div>
-                            </div>
-                        {{end}}
-                    {{end}}
                 {{else}}
                     <p>No hosts or guests found for this podcast.</p>
                 {{end}}
  
                 <div class="add-host-section">
                     <h2>Add New Host/Guest</h2>
-                    <form hx-post="/add-host" hx-target="#pending-hosts" hx-swap="none">
+                    <form id="host-form" 
+                          hx-post="/add-host" 
+                          hx-target="#pending-hosts" 
+                          hx-swap="none">
                         <input type="hidden" name="podcastId" value="{{.Podcast.ID}}">
-                        <input type="text" name="name" placeholder="Name" required>
+                        <div class="relative">
+                            <input type="text" 
+                                   name="name" 
+                                   placeholder="Name" 
+                                   required
+                                   hx-get="/search-hosts"
+                                   hx-trigger="keyup changed delay:300ms"
+                                   hx-target="#search-results"
+                                   hx-swap="innerHTML">
+                            <div id="search-results" 
+                                 class="absolute z-10 w-full mt-1 bg-gray-800 rounded-md shadow-lg max-h-60 overflow-auto hidden">
+                            </div>
+                        </div>
                         <select name="role" required>
                             <option value="">Select Role</option>
                             <option value="Host">Host</option>
@@ -189,8 +227,10 @@
             </div>
         </div>
     </template>
-
+    
+    <script src="/static/js/search-dropdown.js"></script>
     <script>
+        // Add this event listener for handling the new host submission
         document.body.addEventListener('htmx:afterRequest', function(event) {
             if (event.detail.target.id === 'pending-hosts') {
                 const template = document.getElementById('pending-host-template');
@@ -198,13 +238,55 @@
                 const pendingHost = document.createElement('div');
                 pendingHost.innerHTML = template.innerHTML;
                 
+                // Update template with host info
                 pendingHost.querySelector('img').src = newHost.img || '/static/default-avatar.png';
                 pendingHost.querySelector('h3').textContent = newHost.name;
-                pendingHost.querySelector('p strong').nextSibling.textContent = ' ' + newHost.role;
+                pendingHost.querySelector('p strong').nextSibling.textContent = ' ' + 
+                    newHost.podcasts[0].role;  // Get role from first podcast association
                 pendingHost.querySelector('p:nth-of-type(2)').textContent = newHost.description;
                 pendingHost.querySelector('a').href = newHost.link;
-
+    
                 event.detail.target.appendChild(pendingHost.firstElementChild);
+            }
+        });
+
+        // Add this script to handle the search functionality
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.target.id === 'search-results') {
+                if (evt.detail.target.innerHTML.trim()) {
+                    evt.detail.target.classList.remove('hidden');
+                } else {
+                    evt.detail.target.classList.add('hidden');
+                }
+            }
+        });
+    
+        // Handle filling the form when a host is selected
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.target.id === 'host-form' && evt.detail.xhr.status === 200) {
+                try {
+                    const host = JSON.parse(evt.detail.xhr.response);
+                    document.querySelector('input[name="name"]').value = host.name;
+                    document.querySelector('select[name="role"]').value = host.role;
+                    document.querySelector('textarea[name="description"]').value = host.description;
+                    document.querySelector('input[name="link"]').value = host.link;
+                    document.querySelector('input[name="img"]').value = host.img || '';
+                    document.querySelector('#host-search').value = host.name;
+                    document.querySelector('#search-results').classList.add('hidden');
+                } catch (e) {
+                    console.error('Error parsing host details:', e);
+                }
+            }
+        });
+    
+        function closeSuggestions() {
+            document.querySelector('#search-results').classList.add('hidden');
+        }
+    
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#host-search') && !e.target.closest('#search-results')) {
+                document.querySelector('#search-results').classList.add('hidden');
             }
         });
     </script>

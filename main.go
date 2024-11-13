@@ -49,15 +49,20 @@ type Podcast struct {
 }
 
 type Host struct {
-	ID           int       `json:"id"`
-	Name         string    `json:"name"`
-	Role         string    `json:"role"`
-	Description  string    `json:"description"`
-	Link         string    `json:"link"`
-	Img          string    `json:"img"`
-	PodcastID    int       `json:"podcastId"`
-	PodcastTitle string    `json:"podcastTitle"` // Added field
-	CreatedAt    time.Time `json:"createdAt"`
+	ID          int                  `json:"id"`
+	Name        string               `json:"name"`
+	Description string               `json:"description"`
+	Link        string               `json:"link"`
+	Img         string               `json:"img"`
+	CreatedAt   time.Time            `json:"createdAt"`
+	Podcasts    []PodcastAssociation `json:"podcasts,omitempty"`
+}
+
+type PodcastAssociation struct {
+	PodcastID int    `json:"podcastId"`
+	Title     string `json:"podcastTitle"`
+	Role      string `json:"role"`
+	Status    string `json:"status"`
 }
 
 type Admin struct {
@@ -96,6 +101,9 @@ func main() {
 	r.HandleFunc("/podcast/{id}", podcastHandler)
 	r.HandleFunc("/podcast/", podcastHandler)
 	r.HandleFunc("/add-host", addHostHandler).Methods("POST")
+	r.HandleFunc("/search-hosts", searchHostsHandler)
+	r.HandleFunc("/get-host-details", getHostDetailsHandler)
+	r.HandleFunc("/delete-host/{id}", adminAuthMiddleware(deleteHostHandler)).Methods("DELETE")
 
 	// Admin routes
 	r.HandleFunc("/admin/login", adminLoginHandler).Methods("GET", "POST")
@@ -109,6 +117,51 @@ func main() {
 	r.HandleFunc("/api/hosts/{id}", getHostsAPI)
 	r.HandleFunc("/api/download-database", downloadDatabaseHandler)
 	r.HandleFunc("/api/recent-hosts", getRecentHostsHandler)
+
+	// Update the debug route to use the new schema
+	r.HandleFunc("/debug/hosts", func(w http.ResponseWriter, r *http.Request) {
+		query := `
+			SELECT DISTINCT h.id, h.name, hp.role, hp.status, p.title
+			FROM hosts h
+			JOIN host_podcasts hp ON h.id = hp.host_id
+			JOIN podcasts p ON p.id = hp.podcast_id
+			WHERE hp.status = 'approved'
+			ORDER BY h.name
+		`
+		rows, err := db.Query(query)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var hosts []struct {
+			ID           int    `json:"id"`
+			Name         string `json:"name"`
+			Role         string `json:"role"`
+			Status       string `json:"status"`
+			PodcastTitle string `json:"podcastTitle"`
+		}
+
+		for rows.Next() {
+			var h struct {
+				ID           int    `json:"id"`
+				Name         string `json:"name"`
+				Role         string `json:"role"`
+				Status       string `json:"status"`
+				PodcastTitle string `json:"podcastTitle"`
+			}
+			err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Status, &h.PodcastTitle)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			hosts = append(hosts, h)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(hosts)
+	})
 
 	// Docs Routes
 	r.HandleFunc("/docs/what-is-this-for", func(w http.ResponseWriter, r *http.Request) {
@@ -134,25 +187,45 @@ func main() {
 
 func initDB() {
 	_, err := db.Exec(`
-        CREATE TABLE IF NOT EXISTS hosts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            role TEXT,
-            description TEXT,
-            link TEXT,
-            img TEXT,
-            podcast_id INTEGER,
-            podcast_title TEXT,
-            status TEXT DEFAULT 'pending',
-            approval_key TEXT UNIQUE,
-            approval_key_expires_at DATETIME,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
+		CREATE TABLE IF NOT EXISTS hosts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			role TEXT,
+			description TEXT,
+			link TEXT,
+			img TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS podcasts (
+			id INTEGER PRIMARY KEY,
+			title TEXT NOT NULL,
+			feed_url TEXT
+		);
+
+		CREATE TABLE IF NOT EXISTS host_podcasts (
+			host_id INTEGER,
+			podcast_id INTEGER,
+			role TEXT NOT NULL,
+			status TEXT DEFAULT 'pending',
+			approval_key TEXT UNIQUE,
+			approval_key_expires_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (host_id, podcast_id),
+			FOREIGN KEY (host_id) REFERENCES hosts(id),
+			FOREIGN KEY (podcast_id) REFERENCES podcasts(id)
+		);
         CREATE TABLE IF NOT EXISTS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
             password TEXT
         );
+
+		-- Add IF NOT EXISTS to index creation
+		CREATE INDEX IF NOT EXISTS idx_host_podcasts_host_id ON host_podcasts(host_id);
+		CREATE INDEX IF NOT EXISTS idx_host_podcasts_podcast_id ON host_podcasts(podcast_id);
+		CREATE INDEX IF NOT EXISTS idx_host_podcasts_status ON host_podcasts(status);
+
     `)
 	if err != nil {
 		log.Fatal(err)
@@ -208,10 +281,11 @@ func createHostApprovalKey(hostID int) (string, error) {
 	// Set expiration time to 24 hours from now
 	expiresAt := time.Now().Add(24 * time.Hour)
 
+	// Update all pending associations for this host
 	_, err = db.Exec(`
-        UPDATE hosts 
-        SET approval_key = ?, approval_key_expires_at = ? 
-        WHERE id = ? AND status = 'pending'`,
+        UPDATE host_podcasts
+        SET approval_key = ?, approval_key_expires_at = ?
+        WHERE host_id = ? AND status = 'pending'`,
 		key, expiresAt, hostID)
 
 	if err != nil {
@@ -262,7 +336,16 @@ func adminLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT id, name, role, description, link, img, podcast_id FROM hosts WHERE status = 'pending'")
+	// Updated query to join the necessary tables
+	query := `
+        SELECT h.id, h.name, h.description, h.link, h.img, 
+               hp.role, hp.podcast_id, p.title
+        FROM hosts h
+        JOIN host_podcasts hp ON h.id = hp.host_id
+        JOIN podcasts p ON p.id = hp.podcast_id
+        WHERE hp.status = 'pending'`
+
+	rows, err := db.Query(query)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -272,25 +355,45 @@ func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	var pendingHosts []Host
 	for rows.Next() {
 		var h Host
-		err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Description, &h.Link, &h.Img, &h.PodcastID)
+		var role string
+		var podcastID int
+		var podcastTitle string
+
+		err := rows.Scan(
+			&h.ID,
+			&h.Name,
+			&h.Description,
+			&h.Link,
+			&h.Img,
+			&role,         // from host_podcasts
+			&podcastID,    // from host_podcasts
+			&podcastTitle, // from podcasts
+		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		// Create the podcast association
+		h.Podcasts = []PodcastAssociation{{
+			PodcastID: podcastID,
+			Title:     podcastTitle,
+			Role:      role,
+			Status:    "pending",
+		}}
+
 		pendingHosts = append(pendingHosts, h)
 	}
 
-	templates.ExecuteTemplate(w, "admin_dashboard.html", pendingHosts)
+	templates.ExecuteTemplate(w, "admin_dashboard", pendingHosts)
 }
 
 func approveHostHandler(w http.ResponseWriter, r *http.Request) {
-	// Must be a POST request
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Must be authenticated
 	session, _ := store.Get(r, "session")
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -304,19 +407,13 @@ func approveHostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify host exists and is pending
-	var status string
-	err = db.QueryRow("SELECT status FROM hosts WHERE id = ?", hostID).Scan(&status)
-	if err != nil {
-		http.Error(w, "Host not found", http.StatusNotFound)
-		return
-	}
-	if status != "pending" {
-		http.Error(w, "Host already processed", http.StatusBadRequest)
-		return
-	}
-
-	_, err = db.Exec("UPDATE hosts SET status = 'approved' WHERE id = ?", hostID)
+	// Update the status in host_podcasts table
+	_, err = db.Exec(`
+        UPDATE host_podcasts 
+        SET status = 'approved' 
+        WHERE host_id = ? 
+        AND status = 'pending'`,
+		hostID)
 	if err != nil {
 		http.Error(w, "Failed to approve host", http.StatusInternalServerError)
 		return
@@ -331,12 +428,12 @@ func autoApproveHandler(w http.ResponseWriter, r *http.Request) {
 	key := vars["key"]
 
 	result, err := db.Exec(`
-        UPDATE hosts 
-        SET status = 'approved', 
-            approval_key = NULL, 
-            approval_key_expires_at = NULL 
-        WHERE approval_key = ? 
-        AND approval_key_expires_at > CURRENT_TIMESTAMP 
+        UPDATE host_podcasts
+        SET status = 'approved',
+            approval_key = NULL,
+            approval_key_expires_at = NULL
+        WHERE approval_key = ?
+        AND approval_key_expires_at > CURRENT_TIMESTAMP
         AND status = 'pending'`,
 		key)
 
@@ -386,15 +483,18 @@ func sendNotificationToAdmin(host Host) {
 		baseURL = "http://localhost:8085"
 	}
 
-	message := fmt.Sprintf(`New host submission requires approval:
+	// Build podcast associations string
+	var podcastInfo string
+	for _, p := range host.Podcasts {
+		podcastInfo += fmt.Sprintf("\nPodcast: %s (Role: %s)", p.Title, p.Role)
+	}
 
+	message := fmt.Sprintf(`New host submission requires approval:
 Host: %s
-Role: %s
-Podcast: %s
+%s
 Description: %s`,
 		host.Name,
-		host.Role,
-		host.PodcastTitle,
+		podcastInfo,
 		host.Description,
 	)
 
@@ -407,12 +507,10 @@ Description: %s`,
 
 	// Set the one-time approval link
 	approvalURL := fmt.Sprintf("%s/admin/auto-approve/%s", baseURL, approvalKey)
-
 	req.Header.Set("Title", "New Host Submission 🎙️")
 	req.Header.Set("Priority", "default")
 	req.Header.Set("Tags", "new,microphone,user")
 	req.Header.Set("Click", fmt.Sprintf("%s/admin/dashboard", baseURL))
-
 	if host.Img != "" {
 		req.Header.Set("Attach", host.Img)
 	}
@@ -478,6 +576,22 @@ func podcastHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Error getting hosts: %v", err), http.StatusInternalServerError)
 			return
 		}
+	} else {
+		// Convert Person structs to Host structs
+		for _, person := range podcast.Hosts {
+			host := Host{
+				Name: person.Name,
+				Img:  person.Img,
+				Link: person.Href,
+				Podcasts: []PodcastAssociation{{
+					PodcastID: podcast.ID,
+					Title:     podcast.Title,
+					Role:      person.Role,
+					Status:    "approved",
+				}},
+			}
+			hosts = append(hosts, host)
+		}
 	}
 
 	// Check if the user is an admin
@@ -507,7 +621,14 @@ func podcastHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getApprovedHostsForPodcast(podcastID string) ([]Host, error) {
-	rows, err := db.Query("SELECT id, name, role, description, link, img FROM hosts WHERE podcast_id = ? AND status = 'approved'", podcastID)
+	query := `
+        SELECT h.id, h.name, h.description, h.link, h.img, hp.role
+        FROM hosts h
+        JOIN host_podcasts hp ON h.id = hp.host_id
+        WHERE hp.podcast_id = ?
+        AND hp.status = 'approved'`
+
+	rows, err := db.Query(query, podcastID)
 	if err != nil {
 		return nil, err
 	}
@@ -516,10 +637,19 @@ func getApprovedHostsForPodcast(podcastID string) ([]Host, error) {
 	var hosts []Host
 	for rows.Next() {
 		var h Host
-		err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Description, &h.Link, &h.Img)
+		var role string
+		err := rows.Scan(&h.ID, &h.Name, &h.Description, &h.Link, &h.Img, &role)
 		if err != nil {
 			return nil, err
 		}
+
+		// Create podcast association for this host
+		h.Podcasts = []PodcastAssociation{{
+			PodcastID: parseInt(podcastID),
+			Role:      role,
+			Status:    "approved",
+		}}
+
 		hosts = append(hosts, h)
 	}
 	return hosts, nil
@@ -548,39 +678,84 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 	podcastID, _ := strconv.Atoi(r.Form.Get("podcastId"))
 	imgURL := r.Form.Get("img")
 	if imgURL != "" && !isValidImageURL(imgURL) {
-		imgURL = "" // Clear the URL if it's invalid
+		imgURL = ""
 	}
 
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Check if host exists
+	var hostID int
+	name := r.Form.Get("name")
+	err = tx.QueryRow("SELECT id FROM hosts WHERE name = ?", name).Scan(&hostID)
+
+	if err == sql.ErrNoRows {
+		// Create new host
+		result, err := tx.Exec(`
+            INSERT INTO hosts (name, description, link, img) 
+            VALUES (?, ?, ?, ?)`,
+			name, r.Form.Get("description"), r.Form.Get("link"), imgURL)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		hostID64, _ := result.LastInsertId()
+		hostID = int(hostID64)
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get podcast details and ensure it exists in podcasts table
 	podcast, err := getPodcastDetails(strconv.Itoa(podcastID))
 	if err != nil {
 		http.Error(w, "Unable to fetch podcast details", http.StatusInternalServerError)
 		return
 	}
 
-	host := Host{
-		Name:         r.Form.Get("name"),
-		Role:         r.Form.Get("role"),
-		Description:  r.Form.Get("description"),
-		Link:         r.Form.Get("link"),
-		Img:          imgURL,
-		PodcastID:    podcastID,
-		PodcastTitle: podcast.Title, // Store the podcast title
-	}
-
-	result, err := db.Exec(`
-        INSERT INTO hosts (
-            name, role, description, link, img, podcast_id, podcast_title, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-		host.Name, host.Role, host.Description, host.Link, host.Img,
-		host.PodcastID, host.PodcastTitle,
-	)
+	// Insert or update podcast
+	_, err = tx.Exec(`
+        INSERT INTO podcasts (id, title, feed_url) 
+        VALUES (?, ?, ?)
+        ON CONFLICT (id) DO UPDATE SET 
+        title = excluded.title,
+        feed_url = excluded.feed_url`,
+		podcastID, podcast.Title, podcast.FeedURL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	hostID, _ := result.LastInsertId()
-	host.ID = int(hostID)
+	// Create host-podcast association
+	_, err = tx.Exec(`
+        INSERT INTO host_podcasts (host_id, podcast_id, role, status) 
+        VALUES (?, ?, ?, 'pending')
+        ON CONFLICT (host_id, podcast_id) DO UPDATE SET
+        role = excluded.role,
+        status = 'pending'`,
+		hostID, podcastID, r.Form.Get("role"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get complete host info for response
+	host, err := getHostWithPodcasts(hostID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	sendNotificationToAdmin(host)
 
@@ -737,7 +912,13 @@ func getPodcastDetails(id string) (Podcast, error) {
 }
 
 func getHostsForPodcast(podcastID string) ([]Host, error) {
-	rows, err := db.Query("SELECT id, name, role, description, link, img FROM hosts WHERE podcast_id = ?", podcastID)
+	query := `
+        SELECT h.id, h.name, h.description, h.link, h.img, hp.role
+        FROM hosts h
+        JOIN host_podcasts hp ON h.id = hp.host_id
+        WHERE hp.podcast_id = ?`
+
+	rows, err := db.Query(query, podcastID)
 	if err != nil {
 		return nil, err
 	}
@@ -746,13 +927,29 @@ func getHostsForPodcast(podcastID string) ([]Host, error) {
 	var hosts []Host
 	for rows.Next() {
 		var h Host
-		err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Description, &h.Link, &h.Img)
+		var role string
+		err := rows.Scan(&h.ID, &h.Name, &h.Description, &h.Link, &h.Img, &role)
 		if err != nil {
 			return nil, err
 		}
+
+		// Create podcast association for this host
+		h.Podcasts = []PodcastAssociation{{
+			PodcastID: parseInt(podcastID),
+			Role:      role,
+		}}
+
 		hosts = append(hosts, h)
 	}
 	return hosts, nil
+}
+
+func parseInt(s string) int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return i
 }
 
 func getPodcastFromIndexAPI(w http.ResponseWriter, r *http.Request) {
@@ -821,13 +1018,17 @@ type RecentHostsResponse struct {
 func getRecentHostsHandler(w http.ResponseWriter, r *http.Request) {
 	const maxHosts = 6
 
-	rows, err := db.Query(`
-        SELECT id, name, role, img, podcast_id, podcast_title, created_at 
-        FROM hosts 
-        WHERE status = 'approved' 
-        ORDER BY created_at DESC 
-        LIMIT ?
-    `, maxHosts)
+	query := `
+        SELECT DISTINCT h.id, h.name, h.img, h.created_at,
+               hp.role, hp.podcast_id, p.title
+        FROM hosts h
+        JOIN host_podcasts hp ON h.id = hp.host_id
+        JOIN podcasts p ON p.id = hp.podcast_id
+        WHERE hp.status = 'approved'
+        ORDER BY h.created_at DESC
+        LIMIT ?`
+
+	rows, err := db.Query(query, maxHosts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -837,11 +1038,32 @@ func getRecentHostsHandler(w http.ResponseWriter, r *http.Request) {
 	var hosts []Host
 	for rows.Next() {
 		var h Host
-		err := rows.Scan(&h.ID, &h.Name, &h.Role, &h.Img, &h.PodcastID, &h.PodcastTitle, &h.CreatedAt)
+		var role string
+		var podcastID int
+		var podcastTitle string
+
+		err := rows.Scan(
+			&h.ID,
+			&h.Name,
+			&h.Img,
+			&h.CreatedAt,
+			&role,
+			&podcastID,
+			&podcastTitle,
+		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		// Create podcast association
+		h.Podcasts = []PodcastAssociation{{
+			PodcastID: podcastID,
+			Title:     podcastTitle,
+			Role:      role,
+			Status:    "approved",
+		}}
+
 		hosts = append(hosts, h)
 	}
 
@@ -862,4 +1084,137 @@ func getRecentHostsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func searchHostsHandler(w http.ResponseWriter, r *http.Request) {
+	term := r.URL.Query().Get("name")
+	log.Printf("Received search term: %s", term)
+
+	if len(term) < 3 {
+		log.Printf("Search term too short, returning empty result")
+		return
+	}
+
+	query := `
+        SELECT DISTINCT h.id, h.name, hp.role, h.description, h.link, h.img, hp.podcast_id, p.title
+        FROM hosts h
+        JOIN host_podcasts hp ON h.id = hp.host_id
+        JOIN podcasts p ON p.id = hp.podcast_id
+        WHERE hp.status = 'approved'
+        AND h.name LIKE ?
+        ORDER BY h.name
+        LIMIT 5`
+
+	searchTerm := "%" + term + "%"
+	log.Printf("Executing query: %s with term: %s", query, searchTerm)
+
+	rows, err := db.Query(query, searchTerm)
+	if err != nil {
+		log.Printf("Error querying database: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var hosts []Host
+	for rows.Next() {
+		var h Host
+		var role string // Separate variable for role
+		var podcastID int
+		var podcastTitle string
+
+		err := rows.Scan(
+			&h.ID,
+			&h.Name,
+			&role, // Scan into role variable
+			&h.Description,
+			&h.Link,
+			&h.Img,
+			&podcastID,
+			&podcastTitle,
+		)
+		if err != nil {
+			log.Printf("Error scanning row: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Add podcast info to host
+		h.Podcasts = append(h.Podcasts, PodcastAssociation{
+			PodcastID: podcastID,
+			Title:     podcastTitle,
+			Role:      role, // Use the role variable
+			Status:    "approved",
+		})
+
+		hosts = append(hosts, h)
+	}
+
+	log.Printf("Found %d matching hosts", len(hosts))
+
+	if t := templates.Lookup("host-suggestions"); t == nil {
+		log.Printf("Template 'host-suggestions' not found!")
+		http.Error(w, "Template not found", http.StatusInternalServerError)
+		return
+	}
+
+	err = templates.ExecuteTemplate(w, "host-suggestions", hosts)
+	if err != nil {
+		log.Printf("Error executing template: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Successfully executed template")
+}
+
+func getHostDetailsHandler(w http.ResponseWriter, r *http.Request) {
+	hostID := r.URL.Query().Get("id")
+	if hostID == "" {
+		http.Error(w, "Host ID is required", http.StatusBadRequest)
+		return
+	}
+
+	host, err := getHostWithPodcasts(parseInt(hostID))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(host)
+}
+
+func getHostWithPodcasts(hostID int) (Host, error) {
+	var host Host
+	err := db.QueryRow(`
+        SELECT id, name, description, link, img
+        FROM hosts 
+        WHERE id = ?`,
+		hostID).Scan(&host.ID, &host.Name, &host.Description, &host.Link, &host.Img)
+	if err != nil {
+		return host, err
+	}
+
+	rows, err := db.Query(`
+        SELECT hp.podcast_id, p.title, hp.role, hp.status
+        FROM host_podcasts hp
+        JOIN podcasts p ON p.id = hp.podcast_id
+        WHERE hp.host_id = ?`,
+		hostID)
+	if err != nil {
+		return host, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var pa PodcastAssociation
+		err := rows.Scan(&pa.PodcastID, &pa.Title, &pa.Role, &pa.Status)
+		if err != nil {
+			return host, err
+		}
+		host.Podcasts = append(host.Podcasts, pa)
+	}
+
+	return host, nil
 }

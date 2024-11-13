@@ -1,0 +1,30 @@
+{{define "host-suggestions"}}
+    {{range .}}
+    <div class="suggestion-item p-2 hover:bg-gray-700 cursor-pointer"
+         hx-get="/get-host-details?id={{.ID}}"
+         hx-target="#host-form"
+         hx-trigger="click"
+         hx-swap="none"
+         onclick="closeSuggestions()">
+        <div class="flex items-center space-x-3">
+            {{if .Img}}
+                <img src="{{.Img}}"
+                     alt="{{.Name}}"
+                     class="w-8 h-8 rounded-full"
+                     onerror="this.onerror=null; this.src='/static/default-avatar.png';">
+            {{end}}
+            <div>
+                <div class="text-white">{{.Name}}</div>
+                <div class="text-sm text-gray-400">
+                    {{$first := true}}
+                    {{range .Podcasts}}
+                        {{if not $first}}, {{end}}
+                        {{.Role}} at {{.Title}}
+                        {{$first = false}}
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+    {{end}}
+{{end}}

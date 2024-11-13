@@ -94,8 +94,7 @@ Please make sure to change the default admin credentials in production by settin
 
 V1:
 - Additional Admin Users
-- Add same user multiple pods
 - Add Episode specific entries
 
 Beyond:
-- Edit existing Users
+- Edit existing hosts

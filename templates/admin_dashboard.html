@@ -1,3 +1,4 @@
+{{define "admin_dashboard"}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,8 +22,9 @@
                              onerror="this.onerror=null; this.src='/static/default-avatar.png';">
                         <div class="host-info">
                             <h3>{{.Name}}</h3>
-                            <p><strong>Role:</strong> {{.Role}}</p>
-                            <p><strong>Podcast ID:</strong> {{.PodcastID}}</p>
+                            {{range .Podcasts}}
+                                <p><strong>Role:</strong> {{.Role}} for {{.Title}} (ID: {{.PodcastID}})</p>
+                            {{end}}
                             {{if .Description}}<p>{{.Description}}</p>{{end}}
                             {{if .Link}}<a href="{{.Link}}" target="_blank">More Info</a>{{end}}
                             <div class="admin-actions">
@@ -43,3 +45,4 @@
     </div>
 </body>
 </html>
+{{end}}

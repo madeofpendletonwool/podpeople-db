@@ -2,13 +2,15 @@
     <div class="no-hosts-message">{{.Message}}</div>
 {{else}}
     {{range .Hosts}}
-    <div class="host-card">
-        <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}" 
-             alt="{{.Name}}" 
-             onerror="this.onerror=null; this.src='/static/default-avatar.png'; return true;">
-        <h3>{{.Name}}</h3>
-        <p class="host-role">{{.Role}}</p>
-        <p class="podcast-title">{{.PodcastTitle}}</p>
-    </div>
+        <div class="host-card">
+            <img src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                 alt="{{.Name}}"
+                 onerror="this.onerror=null; this.src='/static/default-avatar.png'; return true;">
+            <h3>{{.Name}}</h3>
+            {{range .Podcasts}}
+                <p class="host-role">{{.Role}}</p>
+                <p class="podcast-title">{{.Title}}</p>
+            {{end}}
+        </div>
     {{end}}
 {{end}}
