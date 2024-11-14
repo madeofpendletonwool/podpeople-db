@@ -113,6 +113,9 @@ func main() {
 	r.HandleFunc("/admin/approve/{id}", adminAuthMiddleware(approveHostHandler)).Methods("POST")
 	r.HandleFunc("/admin/reject/{id}", adminAuthMiddleware(rejectHostHandler)).Methods("POST")
 	r.HandleFunc("/admin/auto-approve/{key}", autoApproveHandler).Methods("POST")
+	r.HandleFunc("/admin/add-admin", adminAuthMiddleware(addAdminHandler)).Methods("POST")
+	r.HandleFunc("/admin/edit-admin", adminAuthMiddleware(editAdminHandler)).Methods("PUT")
+	r.HandleFunc("/admin/delete-admin/{id}", adminAuthMiddleware(deleteAdminHandler)).Methods("DELETE")
 
 	// API routes
 	r.HandleFunc("/api/podcast/{id}", getPodcastFromIndexAPI)
@@ -338,9 +341,9 @@ func adminLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
-	// Updated query to join the necessary tables
+	// Get pending hosts
 	query := `
-        SELECT h.id, h.name, h.description, h.link, h.img, 
+        SELECT h.id, h.name, h.description, h.link, h.img,
                hp.role, hp.podcast_id, p.title
         FROM hosts h
         JOIN host_podcasts hp ON h.id = hp.host_id
@@ -367,27 +370,55 @@ func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 			&h.Description,
 			&h.Link,
 			&h.Img,
-			&role,         // from host_podcasts
-			&podcastID,    // from host_podcasts
-			&podcastTitle, // from podcasts
+			&role,
+			&podcastID,
+			&podcastTitle,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// Create the podcast association
 		h.Podcasts = []PodcastAssociation{{
 			PodcastID: podcastID,
 			Title:     podcastTitle,
 			Role:      role,
 			Status:    "pending",
 		}}
-
 		pendingHosts = append(pendingHosts, h)
 	}
 
-	templates.ExecuteTemplate(w, "admin_dashboard", pendingHosts)
+	// Get admin users
+	adminRows, err := db.Query("SELECT id, username FROM admins ORDER BY username")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer adminRows.Close()
+
+	var admins []Admin
+	for adminRows.Next() {
+		var admin Admin
+		err := adminRows.Scan(&admin.ID, &admin.Username)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		admins = append(admins, admin)
+	}
+	// In adminDashboardHandler, right before executing the template:
+	log.Printf("Found %d pending hosts and %d admins", len(pendingHosts), len(admins))
+
+	// Create combined data structure
+	data := struct {
+		PendingHosts []Host  `json:"pendingHosts"`
+		Admins       []Admin `json:"admins"`
+	}{
+		PendingHosts: pendingHosts,
+		Admins:       admins,
+	}
+
+	templates.ExecuteTemplate(w, "admin_dashboard", data)
 }
 
 func approveHostHandler(w http.ResponseWriter, r *http.Request) {
@@ -1320,4 +1351,160 @@ func editHostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func addAdminHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Add admin request received")
+
+	if r.Method != http.MethodPost {
+		log.Printf("Invalid method: %s", r.Method)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+
+	log.Printf("Received username: %s (password length: %d)", username, len(password))
+
+	if username == "" || password == "" {
+		log.Printf("Missing required fields")
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Error hashing password: %v", err)
+		http.Error(w, "Error processing password", http.StatusInternalServerError)
+		return
+	}
+
+	// Insert new admin
+	_, err = db.Exec("INSERT INTO admins (username, password) VALUES (?, ?)",
+		username, string(hashedPassword))
+	if err != nil {
+		log.Printf("Error inserting admin: %v", err)
+		http.Error(w, "Error creating admin user", http.StatusInternalServerError)
+		return
+	}
+
+	// Get updated list of admins
+	adminRows, err := db.Query("SELECT id, username FROM admins ORDER BY username")
+	if err != nil {
+		log.Printf("Error querying admins: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer adminRows.Close()
+
+	var admins []Admin
+	for adminRows.Next() {
+		var admin Admin
+		err := adminRows.Scan(&admin.ID, &admin.Username)
+		if err != nil {
+			log.Printf("Error scanning admin row: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		admins = append(admins, admin)
+	}
+
+	log.Printf("Successfully added admin, returning updated list of %d admins", len(admins))
+
+	// Set content type
+	w.Header().Set("Content-Type", "text/html")
+
+	// Return just the admin list HTML
+	err = templates.ExecuteTemplate(w, "admin-users-list", admins)
+	if err != nil {
+		log.Printf("Error executing template: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func editAdminHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	adminID := r.FormValue("adminId")
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+
+	if adminID == "" || username == "" {
+		http.Error(w, "Admin ID and username are required", http.StatusBadRequest)
+		return
+	}
+
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	if password != "" {
+		// Update username and password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Error processing password", http.StatusInternalServerError)
+			return
+		}
+
+		_, err = tx.Exec("UPDATE admins SET username = ?, password = ? WHERE id = ?",
+			username, string(hashedPassword), adminID)
+	} else {
+		// Update username only
+		_, err = tx.Exec("UPDATE admins SET username = ? WHERE id = ?",
+			username, adminID)
+	}
+
+	if err != nil {
+		http.Error(w, "Error updating admin user", http.StatusInternalServerError)
+		return
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
+}
+
+func deleteAdminHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	vars := mux.Vars(r)
+	adminID := vars["id"]
+
+	// Don't allow deleting the last admin
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM admins").Scan(&count)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if count <= 1 {
+		http.Error(w, "Cannot delete the last admin user", http.StatusBadRequest)
+		return
+	}
+
+	_, err = db.Exec("DELETE FROM admins WHERE id = ?", adminID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

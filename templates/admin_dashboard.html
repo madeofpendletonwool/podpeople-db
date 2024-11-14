@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - PodPeopleDB</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
 </head>
 <body>
     <div class="container">
@@ -15,8 +16,8 @@
         <h1>Admin Dashboard</h1>
         <h2>Pending Host Submissions</h2>
         <div id="pending-hosts-list">
-            {{if .}}
-                {{range .}}
+            {{if .PendingHosts}}
+                {{range .PendingHosts}}
                     <div class="host-item pending-host" id="host-{{.ID}}">
                         <img src="{{if .Img}}/proxy-image?url={{.Img}}{{else}}/static/default-avatar.png{{end}}"
                              alt="{{.Name}}"
@@ -44,7 +45,116 @@
                 <p class="no-submissions">No pending submissions.</p>
             {{end}}
         </div>
+
+
+        <!-- Admin Users Section -->
+        <div class="admin-section">
+            <h2>Admin Users</h2>
+            <button onclick="openAddAdminModal()" class="add-admin-button">Add New Admin</button>
+            <div class="admin-users-list">
+                {{range .Admins}}
+                    <div class="admin-user-item" id="admin-{{.ID}}">
+                        <span class="admin-username">{{.Username}}</span>
+                        <div class="admin-actions">
+                            <button onclick="openEditAdminModal({{.ID}}, '{{.Username}}')" 
+                                    class="edit-button">Edit</button>
+                            <button hx-delete="/admin/delete-admin/{{.ID}}"
+                                    hx-confirm="Are you sure you want to delete this admin?"
+                                    hx-target="#admin-{{.ID}}"
+                                    class="delete-button">Delete</button>
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        </div>
+
+
+        <div id="admin-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeAdminModal()">&times;</span>
+                <h2 id="modal-title">Add New Admin</h2>
+                <form id="admin-form"
+                    hx-post="/admin/add-admin"
+                    hx-target=".admin-users-list"
+                    hx-swap="innerHTML"
+                    hx-trigger="submit"
+                    hx-indicator="#loading"
+                    onsubmit="return false;">  <!-- Prevent default form submission -->
+                <input type="hidden" name="adminId" id="admin-id">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" onclick="closeAdminModal()">Cancel</button>
+                    <button type="submit">Save</button>
+                </div>
+                <div id="loading" class="htmx-indicator">Adding...</div>
+            </form>
+            </div>
+        </div>
+
+
     </div>
+
+    <script>
+        function openAddAdminModal() {
+            const modal = document.getElementById('admin-modal');
+            const form = document.getElementById('admin-form');
+            const title = document.getElementById('modal-title');
+            
+            title.textContent = 'Add New Admin';
+            form.setAttribute('hx-post', '/admin/add-admin');
+            form.reset();
+            modal.style.display = 'block';
+        }
+
+        function openEditAdminModal(id, username) {
+            const modal = document.getElementById('admin-modal');
+            const form = document.getElementById('admin-form');
+            const title = document.getElementById('modal-title');
+            
+            title.textContent = 'Edit Admin';
+            form.setAttribute('hx-put', '/admin/edit-admin');
+            document.getElementById('admin-id').value = id;
+            document.getElementById('username').value = username;
+            document.getElementById('password').placeholder = 'Leave blank to keep current password';
+            document.getElementById('password').required = false;
+            modal.style.display = 'block';
+        }
+
+        function closeAdminModal() {
+            const modal = document.getElementById('admin-modal');
+            modal.style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('admin-modal');
+            if (event.target == modal) {
+                closeAdminModal();
+            }
+        }
+        // Add these after your existing event listeners
+        document.body.addEventListener('htmx:beforeRequest', function(evt) {
+            console.log('HTMX request starting:', evt.detail);
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            console.log('HTMX request finished:', evt.detail);
+            if (evt.detail.successful) {
+                closeAdminModal();
+            }
+        });
+
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            console.log('HTMX response error:', evt.detail);
+        });
+    </script>
 </body>
 </html>
 {{end}}

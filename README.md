@@ -93,5 +93,4 @@ Please make sure to change the default admin credentials in production by settin
 ## ToDo
 
 V1:
-- Additional Admin Users
 - Add Episode specific entries

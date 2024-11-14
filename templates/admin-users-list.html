@@ -1,0 +1,15 @@
+{{define "admin-users-list"}}
+    {{range .}}
+        <div class="admin-user-item" id="admin-{{.ID}}">
+            <span class="admin-username">{{.Username}}</span>
+            <div class="admin-actions">
+                <button onclick="openEditAdminModal({{.ID}}, '{{.Username}}')" 
+                        class="edit-button">Edit</button>
+                <button hx-delete="/admin/delete-admin/{{.ID}}"
+                        hx-confirm="Are you sure you want to delete this admin?"
+                        hx-target="#admin-{{.ID}}"
+                        class="delete-button">Delete</button>
+            </div>
+        </div>
+    {{end}}
+{{end}}
