@@ -79,6 +79,23 @@ var (
 	ntfyTopic = os.Getenv("NTFY_TOPIC") // e.g., "podpeople-notifications"
 )
 
+func corsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // Allow requests from ntfy domains
+        w.Header().Set("Access-Control-Allow-Origin", "*") // Or specific ntfy domain
+        w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+        w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
+
+        // Handle preflight requests
+        if r.Method == "OPTIONS" {
+            w.WriteHeader(http.StatusOK)
+            return
+        }
+
+        next.ServeHTTP(w, r)
+    })
+}
+
 func main() {
 	var err error
 	db, err = sql.Open("sqlite3", "/app/podpeople-data/podpeopledb.sqlite")
@@ -95,6 +112,7 @@ func main() {
 	templates = template.Must(template.New("").Funcs(funcMap).ParseGlob("templates/*.html"))
 
 	r := mux.NewRouter()
+	r.Use(corsMiddleware)
 
 	// Public routes
 	r.HandleFunc("/", homeHandler)
@@ -481,8 +499,7 @@ func autoApproveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect to a success page
-	http.Redirect(w, r, "/admin/approval-success", http.StatusSeeOther)
+    w.WriteHeader(http.StatusOK)
 }
 
 func rejectHostHandler(w http.ResponseWriter, r *http.Request) {
