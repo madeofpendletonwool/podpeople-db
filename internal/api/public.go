@@ -24,7 +24,7 @@ func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// PodcastHandler handles the podcast detail page
+// Modified PodcastHandler function for public.go
 func (s *Server) PodcastHandler(w http.ResponseWriter, r *http.Request) {
 	var podcastID string
 	// Check if ID is in URL path
@@ -36,7 +36,34 @@ func (s *Server) PodcastHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if podcastID == "" {
-		http.Error(w, "Missing podcast ID", http.StatusBadRequest)
+		// Handle missing podcast ID
+		data := struct {
+			Title   string
+			Message string
+		}{
+			Title:   "Missing Podcast ID",
+			Message: "Please provide a valid Podcast Index ID to continue.",
+		}
+
+		if err := s.TemplateManager.Render(w, "error.html", data); err != nil {
+			http.Error(w, "Error rendering error page", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Check for invalid podcast IDs specifically for "0"
+	if podcastID == "0" {
+		data := struct {
+			Title   string
+			Message string
+		}{
+			Title:   "Invalid Podcast ID",
+			Message: "The podcast ID '0' is not valid. Please provide a correct Podcast Index ID.",
+		}
+
+		if err := s.TemplateManager.Render(w, "error.html", data); err != nil {
+			http.Error(w, "Error rendering error page", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -44,7 +71,18 @@ func (s *Server) PodcastHandler(w http.ResponseWriter, r *http.Request) {
 	podcast, err := s.PodcastService.GetPodcastDetails(podcastID)
 	if err != nil {
 		log.Printf("Error getting podcast details: %v", err)
-		http.Error(w, fmt.Sprintf("Error getting podcast details: %v", err), http.StatusInternalServerError)
+
+		data := struct {
+			Title   string
+			Message string
+		}{
+			Title:   "Podcast Not Found",
+			Message: fmt.Sprintf("Error getting podcast details: %v", err),
+		}
+
+		if err := s.TemplateManager.Render(w, "error.html", data); err != nil {
+			http.Error(w, "Error rendering error page", http.StatusInternalServerError)
+		}
 		return
 	}
 

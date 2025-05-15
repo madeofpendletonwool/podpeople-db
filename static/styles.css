@@ -3,7 +3,19 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Roboto",
+        "Oxygen",
+        "Ubuntu",
+        "Cantarell",
+        "Fira Sans",
+        "Droid Sans",
+        "Helvetica Neue",
+        sans-serif;
 }
 
 /* Body styling with dark background */
@@ -33,7 +45,7 @@ body {
 
 /* Prism-like accent */
 .container::before {
-    content: '';
+    content: "";
     position: absolute;
     top: -50%;
     left: -50%;
@@ -68,7 +80,8 @@ body {
 }
 
 /* Headings */
-h1, h2 {
+h1,
+h2 {
     margin-bottom: 20px;
     color: #fff;
 }
@@ -126,7 +139,10 @@ h1, h2 {
 }
 
 /* Inputs and buttons */
-input, select, textarea, button {
+input,
+select,
+textarea,
+button {
     width: 100%;
     margin: 10px 0;
     padding: 12px;
@@ -138,7 +154,9 @@ input, select, textarea, button {
     transition: all 0.3s ease;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.5);
 }
@@ -151,7 +169,7 @@ button {
 }
 
 button:hover {
-    background-color: #357ABD;
+    background-color: #357abd;
 }
 
 .delete-host {
@@ -177,7 +195,7 @@ a {
 }
 
 a:hover {
-    color: #357ABD;
+    color: #357abd;
     text-decoration: none;
 }
 
@@ -226,7 +244,7 @@ form {
     margin-top: 10px;
 }
 .approve-button {
-    background-color: #4CAF50;
+    background-color: #4caf50;
     color: white;
     border: none;
     padding: 5px 10px;
@@ -280,7 +298,7 @@ form {
 }
 
 .download-button:hover {
-    background-color: #357ABD;
+    background-color: #357abd;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -328,10 +346,12 @@ form {
     padding: 1rem;
     width: 100%;
     max-width: 300px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    display: flex;           /* Add flex display */
-    flex-direction: column;  /* Stack items vertically */
-    align-items: center;     /* Center items horizontally */
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
+    display: flex; /* Add flex display */
+    flex-direction: column; /* Stack items vertically */
+    align-items: center; /* Center items horizontally */
 }
 
 .host-card:hover {
@@ -340,10 +360,10 @@ form {
 }
 
 .host-card img {
-    width: 100px;           /* Fixed width */
-    height: 100px;          /* Fixed height - same as width for perfect circle */
-    object-fit: cover;      /* Maintain aspect ratio */
-    border-radius: 50%;     /* Make it circular */
+    width: 100px; /* Fixed width */
+    height: 100px; /* Fixed height - same as width for perfect circle */
+    object-fit: cover; /* Maintain aspect ratio */
+    border-radius: 50%; /* Make it circular */
     margin-bottom: 0.5rem;
     object-position: center; /* Center the image */
     border: 2px solid #4a90e2; /* Optional: adds a nice border */
@@ -353,19 +373,19 @@ form {
     color: #fff;
     margin: 0.5rem 0;
     font-size: 1.1rem;
-    text-align: center;    /* Center the name */
+    text-align: center; /* Center the name */
 }
 
 /* Add these for the role and title */
 .host-card .host-role,
 .host-card .podcast-title {
-    text-align: center;    /* Center the text */
-    margin: 0.25rem 0;     /* Add some spacing */
-    color: #aaa;          /* Lighter color for secondary info */
+    text-align: center; /* Center the text */
+    margin: 0.25rem 0; /* Add some spacing */
+    color: #aaa; /* Lighter color for secondary info */
 }
 
 .host-card .podcast-title {
-    font-style: italic;    /* Make the podcast title italic */
+    font-style: italic; /* Make the podcast title italic */
 }
 
 .host-role {
@@ -419,7 +439,6 @@ form {
     text-decoration: underline;
 }
 
-
 .github-link {
     display: flex;
     align-items: center;
@@ -449,7 +468,6 @@ form {
         grid-template-columns: 1fr;
     }
 }
-
 
 .docs-container {
     max-width: 1000px;
@@ -485,7 +503,8 @@ form {
     margin-top: 2rem;
 }
 
-.docs-content ul, .docs-content ol {
+.docs-content ul,
+.docs-content ol {
     margin-left: 1.5rem;
 }
 
@@ -514,13 +533,13 @@ form {
     padding-top: 1rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
-    justify-content: flex-end;  /* Changed from space-between to flex-end */
+    justify-content: flex-end; /* Changed from space-between to flex-end */
     gap: 1rem;
 }
 
 /* Add specific class for previous links when they exist */
 .docs-nav-link.prev {
-    margin-right: auto;  /* This pushes it to the left when present */
+    margin-right: auto; /* This pushes it to the left when present */
 }
 
 .docs-nav-link {
@@ -560,7 +579,7 @@ form {
 }
 
 .docs-button:hover {
-    background-color: #357ABD;
+    background-color: #357abd;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -610,8 +629,6 @@ form {
     line-height: 1.5;
 }
 
-
-
 /* Search results container */
 #search-results {
     position: absolute;
@@ -620,7 +637,9 @@ form {
     background-color: #1f2937;
     border: 1px solid #374151;
     border-radius: 6px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
     z-index: 50;
     max-height: 250px;
     overflow-y: auto;
@@ -715,7 +734,7 @@ input[name="name"] {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.7);
+    background-color: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -728,8 +747,8 @@ input[name="name"] {
     width: 90%;
     max-width: 500px;
     position: relative;
-    margin: 0 auto;  /* Center the modal */
-    transform: translateY(0);  /* Prevent right shift */
+    margin: 0 auto; /* Center the modal */
+    transform: translateY(0); /* Prevent right shift */
 }
 
 .close {
@@ -795,7 +814,7 @@ input[name="name"] {
 }
 
 .add-admin-button {
-    background-color: #4CAF50;
+    background-color: #4caf50;
     color: white;
     padding: 0.5rem 1rem;
     border: none;
@@ -812,11 +831,129 @@ input[name="name"] {
     background-color: #dc3545;
 }
 
-.edit-button, .delete-button {
+.edit-button,
+.delete-button {
     color: white;
     padding: 0.25rem 0.75rem;
     border: none;
     border-radius: 3px;
     cursor: pointer;
     margin-left: 0.5rem;
+}
+
+.error-container {
+    background-color: #1a1a1a;
+    border-radius: 10px;
+    padding: 2rem;
+    margin-top: 2rem;
+    text-align: left;
+    border-left: 4px solid #f44336;
+    animation: fade-in 0.5s ease-in-out;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.error-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.error-message {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    color: #ccc;
+    line-height: 1.5;
+}
+
+.error-details {
+    background-color: #111;
+    border-radius: 5px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+}
+
+.error-details pre {
+    margin: 0;
+    color: #f44336;
+    font-family: monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.error-list {
+    margin-left: 1.5rem;
+    margin-bottom: 2rem;
+    color: #ccc;
+}
+
+.error-list li {
+    margin-bottom: 0.5rem;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.error-list li::before {
+    content: "•";
+    color: #f44336;
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+.error-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.primary-button,
+.secondary-button {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.primary-button {
+    background-color: #4a90e2;
+    color: white;
+}
+
+.primary-button:hover {
+    background-color: #357abd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.secondary-button {
+    background-color: #333;
+    color: white;
+}
+
+.secondary-button:hover {
+    background-color: #444;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 600px) {
+    .error-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
 }
