@@ -25,9 +25,11 @@ func NewHostService(cfg *config.Config, notificationSvc *utils.NotificationServi
 	}
 }
 
-// SubmitHost submits a new host for approval
-func (s *HostService) SubmitHost(host models.Host, podcastID int, role string) error {
-	return db.Transaction(func(tx *sql.Tx) error {
+// Modified SubmitHost function to return the host ID
+func (s *HostService) SubmitHost(host models.Host, podcastID int, role string) (int, error) {
+	var resultHostID int // Define this outside the transaction to return it
+
+	err := db.Transaction(func(tx *sql.Tx) error {
 		// Check if image URL is valid
 		if host.Img != "" && !utils.IsValidImageURL(host.Img) {
 			host.Img = "" // Clear invalid image URL
@@ -56,6 +58,9 @@ func (s *HostService) SubmitHost(host models.Host, podcastID int, role string) e
 			}
 			hostID = int(hostID64)
 		}
+
+		// Set the result ID to be returned
+		resultHostID = hostID
 
 		// Insert or update the podcast
 		_, err = tx.Exec(`
@@ -99,18 +104,17 @@ func (s *HostService) SubmitHost(host models.Host, podcastID int, role string) e
 			return fmt.Errorf("error updating approval key: %w", err)
 		}
 
-		// Set host ID for return
-		host.ID = hostID
-
-		// Get the complete host info
-		var h models.Host
-		err = h.FindByID(db.DB, hostID)
-		if err != nil {
-			return fmt.Errorf("error getting host info: %w", err)
+		// Create a new host instance for notification
+		notificationHost := models.Host{
+			ID:          hostID,
+			Name:        host.Name,
+			Description: host.Description,
+			Link:        host.Link,
+			Img:         host.Img,
 		}
 
 		// Send notification
-		err = s.NotificationService.SendNewHostNotification(h, approvalKey)
+		err = s.NotificationService.SendNewHostNotification(notificationHost, approvalKey)
 		if err != nil {
 			// Just log the error, don't fail the transaction
 			fmt.Printf("Warning: Failed to send notification: %v\n", err)
@@ -118,6 +122,12 @@ func (s *HostService) SubmitHost(host models.Host, podcastID int, role string) e
 
 		return nil
 	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return resultHostID, nil
 }
 
 // ApproveHost approves a pending host

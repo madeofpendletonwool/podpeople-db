@@ -17,6 +17,11 @@ func (s *Server) registerRoutes() {
 	s.Router.Get("/get-host-details", s.GetHostDetailsHandler)
 	s.Router.Get("/proxy-image", s.ProxyImageHandler)
 
+	// Add this line to register the edit-host endpoint for PUT requests
+	s.Router.Put("/edit-host", s.EditHostHandler)
+	// Add this line for DELETE route
+	s.Router.Delete("/delete-host/{id}", s.DeleteHostHandler)
+
 	// Admin routes (with auth middleware)
 	s.Router.Route("/admin", func(r chi.Router) {
 		// Login route (no auth required)

@@ -135,23 +135,26 @@ func (s *Server) PodcastHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// AddHostHandler handles adding a new host
+// Updated AddHostHandler function
 func (s *Server) AddHostHandler(w http.ResponseWriter, r *http.Request) {
+	// Set content type early to ensure it's always set
+	w.Header().Set("Content-Type", "application/json")
+
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
 	podcastID, err := strconv.Atoi(r.Form.Get("podcastId"))
 	if err != nil {
-		http.Error(w, "Invalid podcast ID", http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid podcast ID"})
 		return
 	}
 
 	// Get podcast details to ensure it exists
 	podcast, err := s.PodcastService.GetPodcastDetails(strconv.Itoa(podcastID))
 	if err != nil {
-		http.Error(w, "Unable to fetch podcast details", http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Unable to fetch podcast details: " + err.Error()})
 		return
 	}
 
@@ -169,20 +172,36 @@ func (s *Server) AddHostHandler(w http.ResponseWriter, r *http.Request) {
 		}},
 	}
 
-	// Submit host
-	if err := s.HostService.SubmitHost(host, podcastID, r.Form.Get("role")); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// Submit host and get back the ID
+	hostID, err := s.HostService.SubmitHost(host, podcastID, r.Form.Get("role"))
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
-	// Get complete host info for response
-	if err := host.FindByID(db.DB, host.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if hostID == 0 {
+		json.NewEncoder(w).Encode(map[string]string{"error": "Host ID was not set after submission"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(host)
+	log.Printf("Host successfully submitted with ID: %d", hostID)
+
+	// Create response host with the ID
+	responseHost := models.Host{
+		ID:          hostID,
+		Name:        host.Name,
+		Description: host.Description,
+		Link:        host.Link,
+		Img:         host.Img,
+		Podcasts: []models.PodcastAssociation{{
+			PodcastID: podcastID,
+			Title:     podcast.Title,
+			Role:      r.Form.Get("role"),
+			Status:    "pending",
+		}},
+	}
+
+	json.NewEncoder(w).Encode(responseHost)
 }
 
 // SearchHostsHandler handles searching for hosts
