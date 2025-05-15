@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/yourusername/podpeople-db/internal/models"
+	"github.com/madeofpendletonwool/podpeople-db/internal/models"
 )
 
 // AdminLoginPageHandler handles rendering the admin login page

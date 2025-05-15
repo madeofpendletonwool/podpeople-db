@@ -2,125 +2,97 @@ package models
 
 import (
 	"database/sql"
-	"time"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
-// Admin represents an administrator user
-type Admin struct {
-	ID        int       `json:"id"`
-	Username  string    `json:"username"`
-	Password  string    `json:"-"` // Password is never included in JSON
-	CreatedAt time.Time `json:"createdAt"`
+// FindByID finds a podcast by its ID
+func (p *Podcast) FindByID(db *sql.DB, id int) error {
+	return db.QueryRow(`
+		SELECT id, title, feed_url
+		FROM podcasts
+		WHERE id = ?`, id).Scan(&p.ID, &p.Title, &p.FeedURL)
 }
 
-// CheckPassword checks if the provided password matches the stored hash
-func (a *Admin) CheckPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(a.Password), []byte(password))
-	return err == nil
-}
+// Create creates a new podcast in the database
+func (p *Podcast) Create(db *sql.DB) error {
+	_, err := db.Exec(`
+		INSERT INTO podcasts (id, title, feed_url)
+		VALUES (?, ?, ?)
+		ON CONFLICT (id) DO UPDATE SET
+		title = excluded.title,
+		feed_url = excluded.feed_url`,
+		p.ID, p.Title, p.FeedURL)
 
-// SetPassword securely hashes and sets the password
-func (a *Admin) SetPassword(password string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	a.Password = string(hashedPassword)
-	return nil
-}
-
-// FindByID finds an admin by ID
-func (a *Admin) FindByID(db *sql.DB, id int) error {
-	return db.QueryRow("SELECT id, username, password FROM admins WHERE id = ?", id).
-		Scan(&a.ID, &a.Username, &a.Password)
-}
-
-// FindByUsername finds an admin by username
-func (a *Admin) FindByUsername(db *sql.DB, username string) error {
-	return db.QueryRow("SELECT id, username, password FROM admins WHERE username = ?", username).
-		Scan(&a.ID, &a.Username, &a.Password)
-}
-
-// Create creates a new admin in the database
-func (a *Admin) Create(db *sql.DB) error {
-	result, err := db.Exec("INSERT INTO admins (username, password) VALUES (?, ?)",
-		a.Username, a.Password)
-	if err != nil {
-		return err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return err
-	}
-
-	a.ID = int(id)
-	return nil
-}
-
-// Update updates an admin's details in the database
-func (a *Admin) Update(db *sql.DB) error {
-	_, err := db.Exec("UPDATE admins SET username = ?, password = ? WHERE id = ?",
-		a.Username, a.Password, a.ID)
 	return err
 }
 
-// Delete deletes an admin from the database
-func (a *Admin) Delete(db *sql.DB) error {
-	_, err := db.Exec("DELETE FROM admins WHERE id = ?", a.ID)
+// Update updates a podcast in the database
+func (p *Podcast) Update(db *sql.DB) error {
+	_, err := db.Exec(`
+		UPDATE podcasts
+		SET title = ?, feed_url = ?
+		WHERE id = ?`,
+		p.Title, p.FeedURL, p.ID)
+
 	return err
 }
 
-// CountAdmins counts the total number of admins in the database
-func CountAdmins(db *sql.DB) (int, error) {
-	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM admins").Scan(&count)
-	return count, err
+// Delete deletes a podcast from the database
+func (p *Podcast) Delete(db *sql.DB) error {
+	// First delete host associations
+	_, err := db.Exec("DELETE FROM host_podcasts WHERE podcast_id = ?", p.ID)
+	if err != nil {
+		return err
+	}
+
+	// Then delete the podcast
+	_, err = db.Exec("DELETE FROM podcasts WHERE id = ?", p.ID)
+	return err
 }
 
-// GetAllAdmins gets all admins from the database
-func GetAllAdmins(db *sql.DB) ([]Admin, error) {
-	rows, err := db.Query("SELECT id, username FROM admins ORDER BY username")
+// GetAllPodcasts gets all podcasts from the database
+func GetAllPodcasts(db *sql.DB) ([]Podcast, error) {
+	rows, err := db.Query(`
+		SELECT id, title, feed_url
+		FROM podcasts
+		ORDER BY title`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var admins []Admin
+	var podcasts []Podcast
 	for rows.Next() {
-		var admin Admin
-		if err := rows.Scan(&admin.ID, &admin.Username); err != nil {
+		var p Podcast
+		if err := rows.Scan(&p.ID, &p.Title, &p.FeedURL); err != nil {
 			return nil, err
 		}
-		admins = append(admins, admin)
+		podcasts = append(podcasts, p)
 	}
 
-	return admins, nil
+	return podcasts, nil
 }
 
-// EnsureAdminExists ensures at least one admin exists in the database
-func EnsureAdminExists(db *sql.DB, defaultUsername, defaultPassword string) error {
-	// Check if any admin user exists
-	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM admins").Scan(&count)
+// GetPodcastsWithHosts gets podcasts that have approved hosts
+func GetPodcastsWithHosts(db *sql.DB) ([]Podcast, error) {
+	rows, err := db.Query(`
+		SELECT DISTINCT p.id, p.title, p.feed_url
+		FROM podcasts p
+		JOIN host_podcasts hp ON p.id = hp.podcast_id
+		WHERE hp.status = 'approved'
+		ORDER BY p.title`)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	defer rows.Close()
+
+	var podcasts []Podcast
+	for rows.Next() {
+		var p Podcast
+		if err := rows.Scan(&p.ID, &p.Title, &p.FeedURL); err != nil {
+			return nil, err
+		}
+		podcasts = append(podcasts, p)
 	}
 
-	if count == 0 {
-		// No admin exists, create one
-		admin := Admin{
-			Username: defaultUsername,
-		}
-
-		if err := admin.SetPassword(defaultPassword); err != nil {
-			return err
-		}
-
-		return admin.Create(db)
-	}
-
-	return nil
+	return podcasts, nil
 }

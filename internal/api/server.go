@@ -9,10 +9,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/yourusername/podpeople-db/internal/config"
-	"github.com/yourusername/podpeople-db/internal/db"
-	"github.com/yourusername/podpeople-db/internal/services"
-	"github.com/yourusername/podpeople-db/internal/templates"
+	"github.com/madeofpendletonwool/podpeople-db/internal/config"
+	"github.com/madeofpendletonwool/podpeople-db/internal/db"
+	"github.com/madeofpendletonwool/podpeople-db/internal/services"
+	"github.com/madeofpendletonwool/podpeople-db/internal/templates"
 )
 
 // Server represents the HTTP server

@@ -34,7 +34,7 @@ GET /api/download-database - Download the entire SQLite database
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/podpeople-db.git
+git clone https://github.com/madeofpendletonwool/podpeople-db.git
 ```
 
 2. Build the Docker container:

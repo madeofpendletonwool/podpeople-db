@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/yourusername/podpeople-db/internal/config"
-	"github.com/yourusername/podpeople-db/internal/models"
+	"github.com/madeofpendletonwool/podpeople-db/internal/config"
+	"github.com/madeofpendletonwool/podpeople-db/internal/models"
 )
 
 // PodcastService handles podcast-related operations

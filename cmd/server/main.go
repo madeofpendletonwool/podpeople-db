@@ -9,18 +9,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/yourusername/podpeople-db/internal/api"
-	"github.com/yourusername/podpeople-db/internal/config"
-	"github.com/yourusername/podpeople-db/internal/db"
-	"github.com/yourusername/podpeople-db/internal/services"
-	"github.com/yourusername/podpeople-db/internal/templates"
-	"github.com/yourusername/podpeople-db/internal/utils"
+	"github.com/madeofpendletonwool/podpeople-db/internal/api"
+	"github.com/madeofpendletonwool/podpeople-db/internal/config"
+	"github.com/madeofpendletonwool/podpeople-db/internal/db"
+	"github.com/madeofpendletonwool/podpeople-db/internal/services"
+	"github.com/madeofpendletonwool/podpeople-db/internal/templates"
+	"github.com/madeofpendletonwool/podpeople-db/internal/utils"
 )
 
 func main() {
 	// Parse command line flags
 	var templateDir = flag.String("templates", "./templates", "Path to templates directory")
-	var staticDir = flag.String("static", "./static", "Path to static files directory")
 	flag.Parse()
 
 	// Load configuration

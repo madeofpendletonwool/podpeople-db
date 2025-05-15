@@ -2,50 +2,7 @@ package models
 
 import (
 	"database/sql"
-	"time"
 )
-
-// Person represents a person from the podcast:person XML tag
-type Person struct {
-	Name     string
-	Role     string
-	Group    string
-	Img      string
-	Href     string
-	Episodes []string // List of episode titles this person is associated with
-}
-
-// Podcast represents a podcast from the podcast index
-type Podcast struct {
-	ID          int      `json:"id"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Author      string   `json:"author"`
-	OwnerName   string   `json:"ownerName"`
-	Image       string   `json:"image"`
-	Link        string   `json:"link"`
-	FeedURL     string   `json:"url"`
-	Hosts       []Person `json:"hosts"`
-}
-
-// Host represents a podcast host or guest
-type Host struct {
-	ID          int                  `json:"id"`
-	Name        string               `json:"name"`
-	Description string               `json:"description"`
-	Link        string               `json:"link"`
-	Img         string               `json:"img"`
-	CreatedAt   time.Time            `json:"createdAt"`
-	Podcasts    []PodcastAssociation `json:"podcasts,omitempty"`
-}
-
-// PodcastAssociation represents a relationship between a host and a podcast
-type PodcastAssociation struct {
-	PodcastID int    `json:"podcastId"`
-	Title     string `json:"podcastTitle"`
-	Role      string `json:"role"`
-	Status    string `json:"status"`
-}
 
 // FindByID finds a host by ID
 func (h *Host) FindByID(db *sql.DB, id int) error {

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/podpeople-db/internal/config"
-	"github.com/yourusername/podpeople-db/internal/db"
-	"github.com/yourusername/podpeople-db/internal/models"
-	"github.com/yourusername/podpeople-db/internal/utils"
+	"github.com/madeofpendletonwool/podpeople-db/internal/config"
+	"github.com/madeofpendletonwool/podpeople-db/internal/db"
+	"github.com/madeofpendletonwool/podpeople-db/internal/models"
+	"github.com/madeofpendletonwool/podpeople-db/internal/utils"
 )
 
 // HostService handles host-related operations

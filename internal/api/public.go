@@ -11,8 +11,8 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/yourusername/podpeople-db/internal/db"
-	"github.com/yourusername/podpeople-db/internal/models"
+	"github.com/madeofpendletonwool/podpeople-db/internal/db"
+	"github.com/madeofpendletonwool/podpeople-db/internal/models"
 )
 
 // HomeHandler handles the home page

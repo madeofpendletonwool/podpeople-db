@@ -1,75 +1,149 @@
 package db
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/madeofpendletonwool/podpeople-db/internal/models" // Update with actual import path
 )
 
-// DB is the global database connection
-var DB *sql.DB
+// applyMigrations runs all database migrations
+func applyMigrations() error {
+	log.Println("Applying database migrations...")
 
-// Initialize sets up the database connection
-func Initialize(dbPath string) error {
-	var err error
-
-	// Create directory if it doesn't exist
-	if err = os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
-		return fmt.Errorf("failed to create database directory: %w", err)
-	}
-
-	// Connect to SQLite database
-	DB, err = sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return fmt.Errorf("failed to open database: %w", err)
-	}
-
-	// Test connection
-	if err = DB.Ping(); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	log.Printf("Connected to database at %s", dbPath)
-
-	// Apply migrations
-	if err = applyMigrations(); err != nil {
-		return fmt.Errorf("failed to apply migrations: %w", err)
-	}
-
-	return nil
-}
-
-// Close closes the database connection
-func Close() error {
-	if DB != nil {
-		return DB.Close()
-	}
-	return nil
-}
-
-// Transaction begins a transaction and executes the provided function.
-// The transaction is committed if the function returns nil, otherwise it is rolled back.
-func Transaction(fn func(*sql.Tx) error) error {
-	tx, err := DB.Begin()
+	// Create tables
+	err := createTables()
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		if p := recover(); p != nil {
-			tx.Rollback()
-			panic(p) // re-throw panic after rollback
+	// Create indexes
+	err = createIndexes()
+	if err != nil {
+		return err
+	}
+
+	// Ensure admin user exists
+	err = ensureAdminUser()
+	if err != nil {
+		return err
+	}
+
+	log.Println("Database migrations completed successfully")
+	return nil
+}
+
+// createTables creates database tables if they don't exist
+func createTables() error {
+	_, err := DB.Exec(`
+		-- Hosts table
+		CREATE TABLE IF NOT EXISTS hosts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			description TEXT,
+			link TEXT,
+			img TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		-- Podcasts table
+		CREATE TABLE IF NOT EXISTS podcasts (
+			id INTEGER PRIMARY KEY,
+			title TEXT NOT NULL,
+			feed_url TEXT
+		);
+
+		-- Host-Podcast associations table
+		CREATE TABLE IF NOT EXISTS host_podcasts (
+			host_id INTEGER,
+			podcast_id INTEGER,
+			role TEXT NOT NULL,
+			status TEXT DEFAULT 'pending',
+			approval_key TEXT UNIQUE,
+			approval_key_expires_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (host_id, podcast_id),
+			FOREIGN KEY (host_id) REFERENCES hosts(id),
+			FOREIGN KEY (podcast_id) REFERENCES podcasts(id)
+		);
+
+		-- Admins table
+		CREATE TABLE IF NOT EXISTS admins (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT UNIQUE,
+			password TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		-- Sessions table
+		CREATE TABLE IF NOT EXISTS sessions (
+		    token TEXT PRIMARY KEY,
+		    data BLOB NOT NULL,
+		    expiry TIMESTAMP NOT NULL
+		);
+	`)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// createIndexes creates indexes on the tables
+func createIndexes() error {
+	_, err := DB.Exec(`
+		-- Add IF NOT EXISTS to index creation
+		CREATE INDEX IF NOT EXISTS idx_host_podcasts_host_id ON host_podcasts(host_id);
+		CREATE INDEX IF NOT EXISTS idx_host_podcasts_podcast_id ON host_podcasts(podcast_id);
+		CREATE INDEX IF NOT EXISTS idx_host_podcasts_status ON host_podcasts(status);
+		CREATE INDEX IF NOT EXISTS idx_hosts_name ON hosts(name);
+	`)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ensureAdminUser ensures that at least one admin user exists
+func ensureAdminUser() error {
+	// Check if any admin user exists
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM admins").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		// No admin exists, create one
+		username := os.Getenv("ADMIN_USERNAME")
+		password := os.Getenv("ADMIN_PASSWORD")
+
+		if username == "" || password == "" {
+			// Use default values if environment variables are not set
+			username = "admin"
+			password = "admin"
+			log.Println("Warning: Using default admin credentials. Please change them immediately.")
 		}
-	}()
 
-	if err := fn(tx); err != nil {
-		tx.Rollback()
-		return err
+		admin := models.Admin{
+			Username: username,
+		}
+
+		// Set password (will hash it)
+		if err = admin.SetPassword(password); err != nil {
+			return err
+		}
+
+		// Create admin
+		if err = admin.Create(DB); err != nil {
+			return err
+		}
+
+		log.Printf("Admin user '%s' created successfully\n", username)
 	}
 
-	return tx.Commit()
+	return nil
 }
