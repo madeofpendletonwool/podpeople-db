@@ -80,20 +80,20 @@ var (
 )
 
 func corsMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // Allow requests from ntfy domains
-        w.Header().Set("Access-Control-Allow-Origin", "*") // Or specific ntfy domain
-        w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-        w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow requests from ntfy domains
+		w.Header().Set("Access-Control-Allow-Origin", "*") // Or specific ntfy domain
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
 
-        // Handle preflight requests
-        if r.Method == "OPTIONS" {
-            w.WriteHeader(http.StatusOK)
-            return
-        }
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 
-        next.ServeHTTP(w, r)
-    })
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main() {
@@ -460,9 +460,9 @@ func approveHostHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Update the status in host_podcasts table
 	_, err = db.Exec(`
-        UPDATE host_podcasts 
-        SET status = 'approved' 
-        WHERE host_id = ? 
+        UPDATE host_podcasts
+        SET status = 'approved'
+        WHERE host_id = ?
         AND status = 'pending'`,
 		hostID)
 	if err != nil {
@@ -499,7 +499,7 @@ func autoApproveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusOK)
 }
 
 func rejectHostHandler(w http.ResponseWriter, r *http.Request) {
@@ -747,7 +747,7 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 	if err == sql.ErrNoRows {
 		// Create new host
 		result, err := tx.Exec(`
-            INSERT INTO hosts (name, description, link, img) 
+            INSERT INTO hosts (name, description, link, img)
             VALUES (?, ?, ?, ?)`,
 			name, r.Form.Get("description"), r.Form.Get("link"), imgURL)
 		if err != nil {
@@ -770,9 +770,9 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Insert or update podcast
 	_, err = tx.Exec(`
-        INSERT INTO podcasts (id, title, feed_url) 
+        INSERT INTO podcasts (id, title, feed_url)
         VALUES (?, ?, ?)
-        ON CONFLICT (id) DO UPDATE SET 
+        ON CONFLICT (id) DO UPDATE SET
         title = excluded.title,
         feed_url = excluded.feed_url`,
 		podcastID, podcast.Title, podcast.FeedURL)
@@ -783,7 +783,7 @@ func addHostHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create host-podcast association
 	_, err = tx.Exec(`
-        INSERT INTO host_podcasts (host_id, podcast_id, role, status) 
+        INSERT INTO host_podcasts (host_id, podcast_id, role, status)
         VALUES (?, ?, ?, 'pending')
         ON CONFLICT (host_id, podcast_id) DO UPDATE SET
         role = excluded.role,
@@ -915,7 +915,11 @@ func getPodcastDetails(id string) (Podcast, error) {
 
 	// Log a sample of the feed content
 	feedContent, _ := ioutil.ReadAll(feedResp.Body)
-	log.Printf("First 1000 characters of feed content: %s", string(feedContent[:1000]))
+	if len(feedContent) > 1000 {
+		log.Printf("First 1000 characters of feed content: %s", string(feedContent[:1000]))
+	} else {
+		log.Printf("Feed content (%d characters): %s", len(feedContent), string(feedContent))
+	}
 	feedResp.Body = ioutil.NopCloser(bytes.NewBuffer(feedContent))
 
 	decoder := xml.NewDecoder(feedResp.Body)
@@ -1239,7 +1243,7 @@ func getHostWithPodcasts(hostID int) (Host, error) {
 	var host Host
 	err := db.QueryRow(`
         SELECT id, name, description, link, img
-        FROM hosts 
+        FROM hosts
         WHERE id = ?`,
 		hostID).Scan(&host.ID, &host.Name, &host.Description, &host.Link, &host.Img)
 	if err != nil {
@@ -1322,7 +1326,7 @@ func editHostHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Update host details
 	_, err = tx.Exec(`
-        UPDATE hosts 
+        UPDATE hosts
         SET name = ?, description = ?, link = ?, img = ?
         WHERE id = ?`,
 		r.Form.Get("name"),
