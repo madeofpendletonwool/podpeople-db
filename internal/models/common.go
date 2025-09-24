@@ -53,3 +53,19 @@ type Admin struct {
 	Password  string    `json:"-"` // Password is never included in JSON
 	CreatedAt time.Time `json:"createdAt"`
 }
+
+// Stats represents database statistics
+type Stats struct {
+	TotalHosts    int `json:"total_hosts"`
+	TotalPodcasts int `json:"total_podcasts"`
+	PendingHosts  int `json:"pending_hosts"`
+	ApprovedHosts int `json:"approved_hosts"`
+}
+
+// PodcastSummary represents a summary of a podcast
+type PodcastSummary struct {
+	PodcastID   int    `json:"podcast_id"`
+	Title       string `json:"title"`
+	HostCount   int    `json:"host_count"`
+	Description string `json:"description"`
+}

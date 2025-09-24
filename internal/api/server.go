@@ -38,7 +38,11 @@ func NewServer(
 	sessionManager := scs.New()
 	sessionManager.Lifetime = 24 * time.Hour
 	sessionManager.Store = sqlite3store.New(db.DB)
-	sessionManager.Cookie.Secure = false // Set to true in production with HTTPS
+	sessionManager.Cookie.HttpOnly = true
+	sessionManager.Cookie.SameSite = http.SameSiteLaxMode
+	
+	// Dynamic cookie security based on request context
+	sessionManager.Cookie.Secure = false // Will be set per-request
 
 	// Create router
 	r := chi.NewRouter()

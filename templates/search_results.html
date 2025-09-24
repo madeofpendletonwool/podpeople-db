@@ -1,0 +1,26 @@
+{{if .Message}}
+    <div class="search-message">
+        {{.Message}}
+        {{if eq .Message "Please enter at least 2 characters to search"}}
+            <br><small>Try searching for podcast names like "Joe Rogan" or "This American Life"</small>
+        {{end}}
+    </div>
+{{else}}
+    <div class="search-results">
+        <h3>Search Results for "{{.Query}}"</h3>
+        <div class="podcast-results">
+            {{range .Results}}
+                <div class="podcast-result" onclick="window.location.href='/podcast/{{.ID}}'">
+                    <img src="{{if .Image}}/proxy-image?url={{.Image}}{{else}}/static/podpeople.png{{end}}" 
+                         alt="{{.Title}}" 
+                         onerror="this.onerror=null; this.src='/static/podpeople.png';">
+                    <div class="podcast-info">
+                        <h4>{{.Title}}</h4>
+                        <p class="author">{{.Author}}</p>
+                        <p class="description">{{.Description}}</p>
+                    </div>
+                </div>
+            {{end}}
+        </div>
+    </div>
+{{end}}

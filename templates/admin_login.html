@@ -5,15 +5,121 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - PodPeopleDB</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="container">
-        <h1>Admin Login</h1>
-        <form action="/admin/login" method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="/static/podpeople.png" alt="PodPeopleDB" class="login-logo">
+                <h1>Admin Portal</h1>
+                <p class="login-subtitle">Sign in to manage PodPeopleDB</p>
+            </div>
+            
+            <form action="/admin/login" method="POST" class="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+                
+                <button type="submit" class="login-button">
+                    <span class="button-text">Sign In</span>
+                    <div class="button-spinner" style="display: none;"></div>
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <a href="/" class="back-home">← Back to Home</a>
+            </div>
+        </div>
     </div>
+    
+    <!-- Error Toast -->
+    <div id="error-toast" class="error-toast">
+        <div class="toast-content">
+            <span class="toast-icon">⚠</span>
+            <span class="toast-message"></span>
+        </div>
+    </div>
+
+    <script>
+        // Handle form submission with AJAX
+        document.querySelector('.login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = this;
+            const button = document.querySelector('.login-button');
+            const text = document.querySelector('.button-text');
+            const spinner = document.querySelector('.button-spinner');
+            
+            // Show loading state
+            button.disabled = true;
+            text.style.display = 'none';
+            spinner.style.display = 'inline-block';
+            
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Redirect to dashboard on success
+                    window.location.href = data.redirect;
+                } else {
+                    // Show error toast
+                    showErrorToast(data.error || 'Login failed');
+                    
+                    // Reset button state
+                    button.disabled = false;
+                    text.style.display = 'inline';
+                    spinner.style.display = 'none';
+                    
+                    // Clear password field
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+            } catch (error) {
+                showErrorToast('Network error. Please try again.');
+                
+                // Reset button state
+                button.disabled = false;
+                text.style.display = 'inline';
+                spinner.style.display = 'none';
+            }
+        });
+        
+        function showErrorToast(message) {
+            const toast = document.getElementById('error-toast');
+            const messageEl = document.querySelector('.toast-message');
+            
+            messageEl.textContent = message;
+            toast.classList.add('show');
+            
+            // Auto-hide after 4 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+        
+        // Auto-focus username field
+        document.getElementById('username').focus();
+        
+        // Hide toast on click
+        document.getElementById('error-toast').addEventListener('click', function() {
+            this.classList.remove('show');
+        });
+    </script>
 </body>
 </html>

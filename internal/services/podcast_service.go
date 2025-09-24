@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -195,4 +196,64 @@ func (s *PodcastService) contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// SearchResult represents a podcast search result
+type SearchResult struct {
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	Author      string `json:"author"`
+	Description string `json:"description"`
+	Image       string `json:"image"`
+	FeedURL     string `json:"url"`
+}
+
+// SearchPodcasts searches for podcasts using the PinePods API
+func (s *PodcastService) SearchPodcasts(query string) ([]SearchResult, error) {
+	if s.Config.PodcastAPI.SearchAPIURL == "" {
+		return nil, fmt.Errorf("SEARCH_API_URL is not configured")
+	}
+
+	url := fmt.Sprintf("%s/api/search?query=%s&index=podcastindex", s.Config.PodcastAPI.SearchAPIURL, url.QueryEscape(query))
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error making search request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading search response: %w", err)
+	}
+
+	var searchResponse struct {
+		Status string `json:"status"`
+		Feeds  []struct {
+			ID          int    `json:"id"`
+			Title       string `json:"title"`
+			Author      string `json:"author"`
+			Description string `json:"description"`
+			Image       string `json:"image"`
+			FeedURL     string `json:"url"`
+		} `json:"feeds"`
+	}
+
+	err = json.Unmarshal(body, &searchResponse)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing search response: %w", err)
+	}
+
+	var results []SearchResult
+	for _, feed := range searchResponse.Feeds {
+		results = append(results, SearchResult{
+			ID:          feed.ID,
+			Title:       feed.Title,
+			Author:      feed.Author,
+			Description: feed.Description,
+			Image:       feed.Image,
+			FeedURL:     feed.FeedURL,
+		})
+	}
+
+	return results, nil
 }

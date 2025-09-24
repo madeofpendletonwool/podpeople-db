@@ -424,3 +424,104 @@ func (s *Server) EditHostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
+
+// SearchPageHandler handles the dedicated search results page
+func (s *Server) SearchPageHandler(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	
+	data := map[string]interface{}{
+		"Query": query,
+	}
+
+	if query == "" {
+		data["Message"] = "Please enter a search term"
+	} else if len(query) < 2 {
+		data["Message"] = "Please enter at least 2 characters to search"
+	} else {
+		// Search using PinePods API
+		results, err := s.PodcastService.SearchPodcasts(query)
+		if err != nil {
+			data["Message"] = fmt.Sprintf("Search error: %v", err)
+		} else {
+			data["Results"] = results
+		}
+	}
+
+	if err := s.TemplateManager.Render(w, "search_page.html", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// SearchPodcastsHandler handles searching for podcasts using PinePods API (for HTMX calls)
+func (s *Server) SearchPodcastsHandler(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("query")
+	if len(query) < 2 {
+		if err := s.TemplateManager.Render(w, "search_results.html", map[string]interface{}{
+			"Message": "Please enter at least 2 characters to search",
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Search using PinePods API
+	results, err := s.PodcastService.SearchPodcasts(query)
+	if err != nil {
+		if err := s.TemplateManager.Render(w, "search_results.html", map[string]interface{}{
+			"Message": fmt.Sprintf("Search error: %v", err),
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	data := map[string]interface{}{
+		"Results": results,
+		"Query":   query,
+	}
+
+	if len(results) == 0 {
+		data["Message"] = fmt.Sprintf("No podcasts found for \"%s\"", query)
+	}
+
+	if err := s.TemplateManager.Render(w, "search_results.html", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// GetStatsHandler handles getting database stats
+func (s *Server) GetStatsHandler(w http.ResponseWriter, r *http.Request) {
+	stats, err := s.HostService.GetStats()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := s.TemplateManager.Render(w, "stats.html", stats); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// GetPopularPodcastsHandler handles getting popular podcasts
+func (s *Server) GetPopularPodcastsHandler(w http.ResponseWriter, r *http.Request) {
+	podcasts, err := s.HostService.GetPopularPodcasts(6)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Podcasts []models.PodcastSummary
+		Message  string
+	}{
+		Podcasts: podcasts,
+	}
+
+	if len(podcasts) == 0 {
+		data.Message = "No popular podcasts found"
+	}
+
+	if err := s.TemplateManager.Render(w, "popular_podcasts.html", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}

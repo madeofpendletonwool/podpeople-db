@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,6 +20,14 @@ func (s *Server) AdminLoginPageHandler(w http.ResponseWriter, r *http.Request) {
 // AdminLoginHandler handles admin login
 func (s *Server) AdminLoginHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
+		// Check if this is an AJAX request
+		if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" && 
+		   r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid form data"})
+			return
+		}
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
@@ -29,6 +38,13 @@ func (s *Server) AdminLoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate user
 	admin, err := s.AdminService.Authenticate(username, password)
 	if err != nil {
+		// Check if this is an AJAX request
+		if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid username or password"})
+			return
+		}
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -38,7 +54,14 @@ func (s *Server) AdminLoginHandler(w http.ResponseWriter, r *http.Request) {
 	s.SessionManager.Put(r.Context(), "adminID", admin.ID)
 	s.SessionManager.Put(r.Context(), "adminUsername", admin.Username)
 
-	// Redirect to dashboard
+	// Check if this is an AJAX request
+	if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"success": "Login successful", "redirect": "/admin/dashboard"})
+		return
+	}
+
+	// Redirect to dashboard for regular form submissions
 	http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
 }
 

@@ -14,6 +14,7 @@ func Middleware(sessionManager *scs.SessionManager) []func(http.Handler) http.Ha
 		middleware.Logger,
 		middleware.Recoverer,
 		middleware.StripSlashes,
+		dynamicSecureMiddleware(sessionManager),
 		sessionManager.LoadAndSave,
 		corsMiddleware,
 	}
@@ -49,6 +50,24 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// dynamicSecureMiddleware dynamically sets cookie security based on request headers
+func dynamicSecureMiddleware(sessionManager *scs.SessionManager) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Detect HTTPS from various sources
+			isHTTPS := r.TLS != nil ||
+				r.Header.Get("X-Forwarded-Proto") == "https" ||
+				r.Header.Get("X-Forwarded-Ssl") == "on" ||
+				r.Header.Get("X-Scheme") == "https"
+			
+			// Set secure cookie flag dynamically
+			sessionManager.Cookie.Secure = isHTTPS
+			
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // LoggingMiddleware logs requests

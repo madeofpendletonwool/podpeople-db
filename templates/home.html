@@ -14,22 +14,82 @@
     <div class="container">
         <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
         <h1>Welcome to PodPeopleDB</h1>
-        <form hx-get="/podcast/" hx-target="body" hx-push-url="true">
-            <input type="text" name="id" placeholder="Enter Podcast Index Feed ID" required>
-            <button type="submit">Search</button>
-        </form>
-        <div class="docs-buttons">
-            <a href="/docs/what-is-this-for" class="docs-button">Documentation</a>
+        <p class="subtitle">The open platform for podcast host and guest data</p>
+        
+        <!-- Podcast Search -->
+        <div class="search-section">
+            <h2>Find Podcasts</h2>
+            <div class="search-options">
+                <div class="search-option">
+                    <label>Search by Name</label>
+                    <form action="/search" method="GET">
+                        <input type="text" name="q" placeholder="Try &quot;Code&quot; or &quot;Tech&quot;..." autocomplete="off" required>
+                        <button type="submit">Search</button>
+                    </form>
+                    <small style="color: #888; font-size: 0.8rem;">Find podcasts by name and discover their hosts</small>
+                </div>
+                <div class="search-option">
+                    <label>Search by ID</label>
+                    <form hx-get="/podcast/" hx-target="body" hx-push-url="true">
+                        <input type="text" name="id" placeholder="e.g. 920666" required>
+                        <button type="submit">Go to Podcast</button>
+                    </form>
+                    <small style="color: #888; font-size: 0.8rem;">Have a specific Podcast Index ID? Jump right to it</small>
+                </div>
+            </div>
         </div>
-    
-        <div class="download-section">
-            <a href="/api/download-database" class="download-button">Download Database</a>
+
+        <!-- Action Buttons Section -->
+        <div class="action-buttons-section">
+            <div class="action-buttons-grid">
+                <a href="/docs/what-is-this-for" class="action-button docs-btn">
+                    <div class="button-icon">◉</div>
+                    <div class="button-content">
+                        <h3>Documentation</h3>
+                        <p>Learn how PodPeopleDB works</p>
+                    </div>
+                </a>
+                
+                <a href="/api/download-database" class="action-button download-btn">
+                    <div class="button-icon">↓</div>
+                    <div class="button-content">
+                        <h3>Download Database</h3>
+                        <p>Get the complete dataset</p>
+                    </div>
+                </a>
+                
+                <a href="/admin/login" class="action-button admin-btn">
+                    <div class="button-icon">⚙</div>
+                    <div class="button-content">
+                        <h3>Admin Portal</h3>
+                        <p>Manage hosts and users</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <h2>PodPeopleDB Stats</h2>
+            <div class="stats-grid" hx-get="/api/stats" hx-trigger="load once">
+                <!-- HTMX will load the stats here -->
+            </div>
         </div>
 
         <div class="recent-hosts-section">
             <h2>Recently Added Hosts</h2>
+            <p class="section-subtitle">New faces in the podcast world - click to explore their shows!</p>
             <div class="recent-hosts-grid" hx-get="/api/recent-hosts" hx-trigger="load once">
                 <!-- HTMX will load the recent hosts here -->
+            </div>
+        </div>
+
+        <!-- Featured Podcasts Section -->
+        <div class="featured-section">
+            <h2>Popular Podcasts</h2>
+            <p class="section-subtitle">Shows with the most host data - the community favorites!</p>
+            <div class="featured-grid" hx-get="/api/popular-podcasts" hx-trigger="load once">
+                <!-- HTMX will load popular podcasts here -->
             </div>
         </div>
 
@@ -45,8 +105,9 @@
                     </a>
                 </div>
                 <p class="footer-description">
-                    PodPeopleDB is an open platform where users can submit host and guest data for their favorite podcasts. 
-                    For a more complete explaination, <a href="/docs/what-is-this-for">click here.</a>
+                    PodPeopleDB is like IMDB for podcasts - discover hosts, guests, and the shows they're on. 
+                    Community-powered and completely open source! 
+                    <a href="/docs/what-is-this-for">Learn more about our mission.</a>
                 </p>
             </div>
         </footer>

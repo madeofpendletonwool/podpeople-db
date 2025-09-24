@@ -43,7 +43,7 @@ func main() {
 	// Initialize services
 	notificationService := utils.NewNotificationService(cfg)
 	podcastService := services.NewPodcastService(cfg)
-	hostService := services.NewHostService(cfg, notificationService)
+	hostService := services.NewHostService(cfg, notificationService, db.DB)
 	adminService := services.NewAdminService(cfg)
 
 	// Initialize server

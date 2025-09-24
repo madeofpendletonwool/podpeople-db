@@ -15,13 +15,15 @@ import (
 type HostService struct {
 	Config              *config.Config
 	NotificationService *utils.NotificationService
+	db                  *sql.DB
 }
 
 // NewHostService creates a new host service
-func NewHostService(cfg *config.Config, notificationSvc *utils.NotificationService) *HostService {
+func NewHostService(cfg *config.Config, notificationSvc *utils.NotificationService, database *sql.DB) *HostService {
 	return &HostService{
 		Config:              cfg,
 		NotificationService: notificationSvc,
+		db:                  database,
 	}
 }
 
@@ -211,4 +213,70 @@ func (s *HostService) GetRecentHosts(limit int) ([]models.Host, error) {
 // SearchHosts searches for hosts by name
 func (s *HostService) SearchHosts(term string, limit int) ([]models.Host, error) {
 	return models.SearchHosts(db.DB, term, limit)
+}
+
+// GetStats returns database statistics
+func (s *HostService) GetStats() (models.Stats, error) {
+	var stats models.Stats
+
+	// Get total hosts
+	err := s.db.QueryRow("SELECT COUNT(*) FROM hosts").Scan(&stats.TotalHosts)
+	if err != nil {
+		return stats, err
+	}
+
+	// Get total podcasts (distinct)
+	err = s.db.QueryRow("SELECT COUNT(DISTINCT podcast_id) FROM host_podcasts").Scan(&stats.TotalPodcasts)
+	if err != nil {
+		return stats, err
+	}
+
+	// Get pending hosts
+	err = s.db.QueryRow("SELECT COUNT(*) FROM host_podcasts WHERE status = 'pending'").Scan(&stats.PendingHosts)
+	if err != nil {
+		return stats, err
+	}
+
+	// Get approved hosts
+	err = s.db.QueryRow("SELECT COUNT(*) FROM host_podcasts WHERE status = 'approved'").Scan(&stats.ApprovedHosts)
+	if err != nil {
+		return stats, err
+	}
+
+	return stats, nil
+}
+
+// GetPopularPodcasts returns podcasts with the most hosts
+func (s *HostService) GetPopularPodcasts(limit int) ([]models.PodcastSummary, error) {
+	query := `
+		SELECT 
+			hp.podcast_id,
+			p.title,
+			COUNT(*) as host_count,
+			COALESCE(p.description, '') as description
+		FROM host_podcasts hp
+		JOIN podcasts p ON p.id = hp.podcast_id
+		WHERE hp.status = 'approved'
+		GROUP BY hp.podcast_id, p.title, p.description
+		ORDER BY host_count DESC
+		LIMIT ?
+	`
+
+	rows, err := s.db.Query(query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var podcasts []models.PodcastSummary
+	for rows.Next() {
+		var podcast models.PodcastSummary
+		err := rows.Scan(&podcast.PodcastID, &podcast.Title, &podcast.HostCount, &podcast.Description)
+		if err != nil {
+			return nil, err
+		}
+		podcasts = append(podcasts, podcast)
+	}
+
+	return podcasts, nil
 }

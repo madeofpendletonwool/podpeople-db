@@ -10,6 +10,7 @@ import (
 func (s *Server) registerRoutes() {
 	// Public routes
 	s.Router.Get("/", s.HomeHandler)
+	s.Router.Get("/search", s.SearchPageHandler)
 	s.Router.Get("/podcast/{id}", s.PodcastHandler)
 	s.Router.Get("/podcast/", s.PodcastHandler) // For query param version
 	s.Router.Post("/add-host", s.AddHostHandler)
@@ -52,6 +53,9 @@ func (s *Server) registerRoutes() {
 		r.Get("/hosts/{id}", s.GetHostsAPI)
 		r.Get("/download-database", s.DownloadDatabaseHandler)
 		r.Get("/recent-hosts", s.GetRecentHostsHandler)
+		r.Get("/search-podcasts", s.SearchPodcastsHandler)
+		r.Get("/stats", s.GetStatsHandler)
+		r.Get("/popular-podcasts", s.GetPopularPodcastsHandler)
 	})
 
 	// Documentation routes

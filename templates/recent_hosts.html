@@ -9,7 +9,7 @@
             <h3>{{.Name}}</h3>
             {{range .Podcasts}}
                 <p class="host-role">{{.Role}}</p>
-                <p class="podcast-title">{{.Title}}</p>
+                <p class="podcast-title clickable" onclick="window.location.href='/podcast/{{.PodcastID}}'">{{.Title}}</p>
             {{end}}
         </div>
     {{end}}
