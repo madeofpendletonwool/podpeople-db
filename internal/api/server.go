@@ -24,6 +24,7 @@ type Server struct {
 	PodcastService  *services.PodcastService
 	HostService     *services.HostService
 	AdminService    *services.AdminService
+	EpisodeService  *services.EpisodeService
 }
 
 // NewServer creates a new HTTP server
@@ -33,6 +34,7 @@ func NewServer(
 	podcastSvc *services.PodcastService,
 	hostSvc *services.HostService,
 	adminSvc *services.AdminService,
+	episodeSvc *services.EpisodeService,
 ) *Server {
 	// Initialize session manager
 	sessionManager := scs.New()
@@ -64,6 +66,7 @@ func NewServer(
 		PodcastService:  podcastSvc,
 		HostService:     hostSvc,
 		AdminService:    adminSvc,
+		EpisodeService:  episodeSvc,
 	}
 
 	// Register routes
@@ -75,4 +78,13 @@ func NewServer(
 // ServeHTTP implements the http.Handler interface
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.Router.ServeHTTP(w, r)
+}
+
+// ReinitializeSessionManager reinitializes the session manager with the new database connection
+func (s *Server) ReinitializeSessionManager() {
+	s.SessionManager.Lifetime = 24 * time.Hour
+	s.SessionManager.Store = sqlite3store.New(db.DB)
+	s.SessionManager.Cookie.HttpOnly = true
+	s.SessionManager.Cookie.SameSite = http.SameSiteLaxMode
+	s.SessionManager.Cookie.Secure = false
 }

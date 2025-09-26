@@ -17,6 +17,13 @@ var DB *sql.DB
 func Initialize(dbPath string) error {
 	var err error
 
+	// Close existing connection if it exists
+	if DB != nil {
+		if err := DB.Close(); err != nil {
+			log.Printf("Warning: Error closing existing database connection: %v", err)
+		}
+	}
+
 	// Create directory if it doesn't exist
 	if err = os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
 		return fmt.Errorf("failed to create database directory: %w", err)

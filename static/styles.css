@@ -394,21 +394,23 @@ form {
     margin: 0.25rem 0;
 }
 
-.podcast-title {
+.host-card .podcast-title {
     color: #888;
     font-size: 0.9rem;
     margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+    line-height: 1.3;
+    max-width: 100%;
 }
 
-.podcast-title.clickable {
+.host-card .podcast-title.clickable {
     cursor: pointer;
     transition: color 0.2s ease;
 }
 
-.podcast-title.clickable:hover {
+.host-card .podcast-title.clickable:hover {
     color: #4a90e2;
     text-decoration: underline;
 }
@@ -1049,6 +1051,32 @@ form {
     font-size: 14px;
     font-weight: 500;
     line-height: 1.4;
+}
+
+/* Guest Toast Notifications */
+.toast-notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    transform: translateX(400px);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    max-width: 350px;
+    cursor: pointer;
+}
+
+.toast-notification.error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+}
+
+.toast-notification.show {
+    transform: translateX(0);
 }
 
 /* Mobile responsive login */
@@ -2706,5 +2734,1817 @@ input[name="name"] {
     .error-actions {
         flex-direction: column;
         gap: 0.75rem;
+    }
+}
+
+/* ========================================
+   PODCAST PAGE STYLES
+   ======================================== */
+
+/* Podcast Page Layout */
+.podcast-page {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+    min-height: 100vh;
+    padding: 0;
+    display: block;
+    align-items: unset;
+    justify-content: unset;
+}
+
+.podcast-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    text-align: left;
+    overflow: visible;
+}
+
+/* Header */
+.podcast-header {
+    background: rgba(17, 17, 17, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 1rem 2rem;
+    border-bottom: 1px solid #333;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.back-home {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.back-home:hover {
+    color: #4a90e2;
+    transform: translateX(-2px);
+}
+
+.header-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+}
+
+/* Podcast Hero Section */
+.podcast-hero {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 3rem;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border-bottom: 1px solid #333;
+}
+
+.podcast-artwork {
+    position: relative;
+}
+
+.artwork-image {
+    width: 280px;
+    height: 280px;
+    object-fit: cover;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s ease;
+}
+
+.artwork-image:hover {
+    transform: translateY(-4px);
+}
+
+.podcast-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.podcast-hero .podcast-title {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+    margin: 0;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+}
+
+.podcast-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.meta-label {
+    font-size: 0.875rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.meta-value {
+    font-size: 1.125rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+.podcast-description {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: #ccc;
+    max-width: 600px;
+}
+
+.podcast-links {
+    display: flex;
+    gap: 1rem;
+}
+
+.podcast-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: #333;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid #444;
+}
+
+.podcast-link:hover {
+    background: #4a90e2;
+    border-color: #4a90e2;
+    transform: translateY(-2px);
+}
+
+.podcast-link span {
+    font-size: 1rem;
+}
+
+/* Section Headers */
+.section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.section-header h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+.section-subtitle {
+    font-size: 1.125rem;
+    color: #888;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* People Section */
+.people-section {
+    padding: 4rem 2rem;
+    background: #0d0d0d;
+}
+
+.people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.person-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.person-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #4a90e2, #5cb3d4);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.person-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border-color: #4a90e2;
+}
+
+.person-card:hover::before {
+    opacity: 1;
+}
+
+.person-card.host::before {
+    background: linear-gradient(90deg, #4caf50, #66bb6a);
+}
+
+.person-card.guest::before {
+    background: linear-gradient(90deg, #ff9800, #ffb74d);
+}
+
+.person-card.pending {
+    border-color: #ff9800;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a1a00 100%);
+}
+
+.pending-banner {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #ff9800;
+    color: #000;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.person-avatar {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.person-avatar img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #333;
+    transition: border-color 0.3s ease;
+}
+
+.person-card:hover .person-avatar img {
+    border-color: #4a90e2;
+}
+
+.person-role-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    background: #4a90e2;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.person-card.host .person-role-badge {
+    background: #4caf50;
+}
+
+.person-card.guest .person-role-badge {
+    background: #ff9800;
+}
+
+.person-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+.person-group {
+    font-size: 0.875rem;
+    color: #888;
+    margin-bottom: 0.75rem;
+}
+
+.person-description {
+    font-size: 0.9375rem;
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.person-link {
+    color: #4a90e2;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.person-link:hover {
+    color: #5cb3d4;
+}
+
+.episodes-toggle {
+    background: #333;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.episodes-toggle:hover {
+    background: #4a90e2;
+    border-color: #4a90e2;
+}
+
+.episodes-list {
+    margin-top: 1rem;
+    padding-left: 1.5rem;
+}
+
+.episodes-list li {
+    color: #ccc;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.episodes-count {
+    font-size: 0.875rem;
+    color: #888;
+    margin-bottom: 0.5rem;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #333;
+}
+
+.btn-edit, .btn-delete {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-edit {
+    background: #4a90e2;
+    color: #fff;
+}
+
+.btn-edit:hover {
+    background: #357abd;
+}
+
+.btn-delete {
+    background: #f44336;
+    color: #fff;
+}
+
+.btn-delete:hover {
+    background: #d32f2f;
+}
+
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #888;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Add Person Section */
+.add-person-section {
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border-top: 1px solid #333;
+}
+
+.add-person-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.add-person-form {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: #fff;
+    font-size: 0.9375rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.input-with-search {
+    position: relative;
+}
+
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #222;
+    border: 1px solid #444;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.search-dropdown.hidden {
+    display: none;
+}
+
+.submit-btn {
+    background: linear-gradient(135deg, #4a90e2 0%, #5cb3d4 100%);
+    color: #fff;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(74, 144, 226, 0.3);
+}
+
+.pending-submissions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+/* Episodes Section */
+.episodes-section {
+    padding: 4rem 2rem;
+    background: #0d0d0d;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 4rem;
+    color: #888;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #333;
+    border-top: 3px solid #4a90e2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Episodes Grid */
+.episodes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+.episode-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.episode-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #9c27b0, #e91e63);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.episode-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    border-color: #9c27b0;
+}
+
+.episode-card:hover::before {
+    opacity: 1;
+}
+
+.episode-header {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.episode-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.episode-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.episode-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.episode-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: #888;
+}
+
+.episode-date {
+    color: #ccc;
+}
+
+.episode-duration {
+    color: #9c27b0;
+    font-weight: 500;
+}
+
+.episode-number {
+    background: #333;
+    color: #fff;
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.episode-description {
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    font-size: 0.9375rem;
+}
+
+.episode-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid #333;
+}
+
+.episode-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #333;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid #444;
+}
+
+.episode-link:hover {
+    background: #9c27b0;
+    border-color: #9c27b0;
+    transform: translateY(-1px);
+}
+
+.add-guest-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #4caf50;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.add-guest-btn:hover {
+    background: #45a049;
+    transform: translateY(-1px);
+}
+
+.guest-count {
+    font-size: 0.875rem;
+    color: #888;
+    font-weight: 500;
+}
+
+/* Episode Guests Styles */
+.episode-guests {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+.guests-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #9c27b0;
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.guests-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.guest-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    flex: 1;
+    min-width: 150px;
+}
+
+.guest-item:hover {
+    border-color: #9c27b0;
+    transform: translateY(-1px);
+}
+
+.guest-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.guest-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #9c27b0, #e91e63);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.guest-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.guest-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.guest-role {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: capitalize;
+}
+
+/* See More Button Styles */
+.see-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: #4caf50;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 0.5rem;
+}
+
+.see-more-btn:hover {
+    background: #45a049;
+    transform: translateY(-1px);
+}
+
+/* Host Details Modal Styles */
+.host-details-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+.host-details-modal .modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+.host-details-modal .modal-content {
+    position: relative;
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideInUp 0.3s ease;
+}
+
+.host-details-modal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #333;
+    background: linear-gradient(135deg, #222 0%, #1a1a1a 100%);
+}
+
+.host-details-modal .modal-header h2 {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.host-details-modal .modal-close {
+    font-size: 2rem;
+    color: #888;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.host-details-modal .modal-close:hover {
+    color: #fff;
+}
+
+.host-details-modal .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    max-height: calc(80vh - 100px);
+}
+
+.host-modal-info {
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.host-modal-role {
+    color: #9c27b0;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.host-modal-link {
+    color: #4caf50;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.host-modal-link:hover {
+    color: #45a049;
+}
+
+.host-modal-episodes h3 {
+    color: #fff;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    border-bottom: 1px solid #333;
+    padding-bottom: 0.5rem;
+}
+
+.episodes-modal-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.episodes-modal-list li {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #ccc;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    transition: all 0.3s ease;
+}
+
+.episodes-modal-list li:hover {
+    background: #333;
+    border-color: #9c27b0;
+    color: #fff;
+}
+
+/* Scrollbar styling for modal */
+.episodes-modal-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.episodes-modal-list::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+}
+
+.episodes-modal-list::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.episodes-modal-list::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Show More Hosts Button Styles */
+.show-more-hosts-container {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.show-more-hosts-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #9c27b0, #e91e63);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+}
+
+.show-more-hosts-btn:hover {
+    background: linear-gradient(135deg, #8e24aa, #d81b60);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(156, 39, 176, 0.4);
+}
+
+/* All Hosts Modal Styles */
+.all-hosts-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+.all-hosts-modal .modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+.all-hosts-modal .modal-content {
+    position: relative;
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideInUp 0.3s ease;
+}
+
+.all-hosts-modal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #333;
+    background: linear-gradient(135deg, #222 0%, #1a1a1a 100%);
+}
+
+.all-hosts-modal .modal-header h2 {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.all-hosts-modal .modal-close {
+    font-size: 2rem;
+    color: #888;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.all-hosts-modal .modal-close:hover {
+    color: #fff;
+}
+
+.all-hosts-modal .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    max-height: calc(80vh - 100px);
+}
+
+.all-hosts-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.all-hosts-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.all-hosts-item:hover {
+    background: #333;
+    border-color: #9c27b0;
+    transform: translateY(-2px);
+}
+
+.host-item-avatar {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.host-item-avatar img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.host-item-role {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: linear-gradient(135deg, #9c27b0, #e91e63);
+    color: #fff;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    border: 2px solid #222;
+}
+
+.host-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.host-item-info h4 {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.host-group {
+    color: #9c27b0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin: 0 0 0.5rem 0;
+}
+
+.host-link {
+    color: #4caf50;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.host-link:hover {
+    color: #45a049;
+}
+
+.host-episodes-count {
+    color: #888;
+    font-size: 0.75rem;
+    margin: 0.5rem 0 0 0;
+}
+
+.host-episodes-section {
+    margin-top: 0.5rem;
+    border-top: 1px solid #333;
+    padding-top: 0.5rem;
+}
+
+.host-episodes-preview {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0 0;
+}
+
+.host-episodes-preview li {
+    color: #ccc;
+    font-size: 0.75rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #333;
+    line-height: 1.3;
+}
+
+.host-episodes-preview li:last-child {
+    border-bottom: none;
+}
+
+.more-episodes {
+    color: #9c27b0;
+    font-size: 0.75rem;
+    font-style: italic;
+    margin: 0.5rem 0 0 0;
+}
+
+/* Scrollbar styling for all hosts modal */
+.all-hosts-modal .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.all-hosts-modal .modal-body::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+}
+
+.all-hosts-modal .modal-body::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.all-hosts-modal .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
+.empty-episodes {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #888;
+}
+
+.empty-episodes .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-episodes h3 {
+    color: #fff;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.empty-episodes p {
+    font-size: 1.125rem;
+    line-height: 1.6;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    position: relative;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 0;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #333;
+}
+
+.modal-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+    background: #333;
+    color: #fff;
+}
+
+.modal-form {
+    padding: 2rem;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.btn-cancel, .btn-save {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel {
+    background: #333;
+    color: #fff;
+}
+
+.btn-cancel:hover {
+    background: #444;
+}
+
+.btn-save {
+    background: #4a90e2;
+    color: #fff;
+}
+
+.btn-save:hover {
+    background: #357abd;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .podcast-hero {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        text-align: center;
+    }
+    
+    .artwork-image {
+        width: 240px;
+        height: 240px;
+        margin: 0 auto;
+    }
+    
+    .podcast-hero .podcast-title {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .podcast-container {
+        padding: 0;
+    }
+    
+    .podcast-header {
+        padding: 1rem;
+    }
+    
+    .podcast-hero {
+        padding: 2rem 1rem;
+        gap: 1.5rem;
+    }
+    
+    .artwork-image {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .podcast-hero .podcast-title {
+        font-size: 2rem;
+    }
+    
+    .people-section,
+    .add-person-section,
+    .episodes-section {
+        padding: 3rem 1rem;
+    }
+    
+    .people-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .modal-content {
+        width: 95%;
+    }
+    
+    .modal-header,
+    .modal-form {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .podcast-hero {
+        padding: 1.5rem 0.75rem;
+    }
+    
+    .artwork-image {
+        width: 160px;
+        height: 160px;
+    }
+    
+    .podcast-hero .podcast-title {
+        font-size: 1.75rem;
+    }
+    
+    .section-header h2 {
+        font-size: 2rem;
+    }
+    
+    .person-card {
+        padding: 1.5rem;
+    }
+}
+
+/* Episode Guest Card Styles for Admin Dashboard */
+.episode-guest-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    border-left: 4px solid #9c27b0;
+}
+
+.episode-guest-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(156, 39, 176, 0.2);
+    border-color: #9c27b0;
+}
+
+.episode-guest-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.guest-type-badge {
+    position: absolute;
+    top: -0.5rem;
+    right: -0.5rem;
+    background: #9c27b0;
+    color: #fff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.guest-info {
+    flex: 1;
+}
+
+.guest-info h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 0.25rem 0;
+}
+
+.guest-role {
+    font-size: 0.9375rem;
+    color: #9c27b0;
+    font-weight: 500;
+    margin: 0;
+}
+
+.guest-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #9c27b0;
+}
+
+.guest-avatar-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #9c27b0, #e91e63);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.25rem;
+    text-transform: uppercase;
+}
+
+.episode-info {
+    background: rgba(156, 39, 176, 0.1);
+    border: 1px solid rgba(156, 39, 176, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.episode-info h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+}
+
+.podcast-name {
+    font-size: 0.9375rem;
+    color: #ccc;
+    margin: 0 0 0.5rem 0;
+    font-weight: 500;
+}
+
+.episode-description {
+    font-size: 0.875rem;
+    color: #aaa;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.submission-info {
+    margin-bottom: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #333;
+}
+
+.submission-date {
+    font-size: 0.875rem;
+    color: #888;
+    margin: 0;
+    font-style: italic;
+}
+
+.episode-guests-container .empty-state .empty-icon {
+    color: #9c27b0;
+}
+
+/* Import Database Section Styles */
+.import-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.warning-box {
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.warning-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.warning-content h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #ff9800;
+    margin: 0 0 0.5rem 0;
+}
+
+.warning-content p {
+    font-size: 0.9375rem;
+    color: #ffcc80;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.import-form {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 2rem;
+}
+
+.import-form .form-field {
+    margin-bottom: 1.5rem;
+}
+
+.import-form label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.import-form input[type="file"] {
+    background: #222;
+    border: 2px dashed #444;
+    border-radius: 8px;
+    padding: 1.5rem;
+    color: #fff;
+    font-size: 0.9375rem;
+    width: 100%;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.import-form input[type="file"]:hover {
+    border-color: #4a90e2;
+    background: #252525;
+}
+
+.import-form input[type="file"]:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.import-form small {
+    display: block;
+    font-size: 0.8125rem;
+    color: #888;
+    margin-top: 0.5rem;
+}
+
+.import-form label input[type="checkbox"] {
+    margin-right: 0.75rem;
+    transform: scale(1.2);
+}
+
+.import-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.danger-button {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    color: #fff;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.danger-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(244, 67, 54, 0.3);
+}
+
+.danger-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.import-progress {
+    background: rgba(74, 144, 226, 0.1);
+    border: 1px solid rgba(74, 144, 226, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.progress-bar {
+    background: #333;
+    border-radius: 8px;
+    height: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #4a90e2, #5cb3d4);
+    height: 100%;
+    width: 0%;
+    animation: progress-fill 2s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+    0% { width: 0%; }
+    50% { width: 70%; }
+    100% { width: 100%; }
+}
+
+.progress-text {
+    font-size: 0.9375rem;
+    color: #4a90e2;
+    margin: 0;
+    font-weight: 500;
+}
+
+.import-result {
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.success-result {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.error-result {
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.result-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.import-result h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+}
+
+.success-result h3 {
+    color: #4caf50;
+}
+
+.error-result h3 {
+    color: #f44336;
+}
+
+.import-result p {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    margin: 0 0 0.5rem 0;
+}
+
+.success-result p {
+    color: #81c784;
+}
+
+.error-result p {
+    color: #ef5350;
+}
+
+/* Responsive adjustments for import section */
+@media (max-width: 768px) {
+    .import-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .import-actions > * {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .warning-box {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .warning-icon {
+        align-self: center;
     }
 }

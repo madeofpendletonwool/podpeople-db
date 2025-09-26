@@ -81,6 +81,40 @@ func createTables() error {
 		    data BLOB NOT NULL,
 		    expiry TIMESTAMP NOT NULL
 		);
+
+		-- Episodes table
+		CREATE TABLE IF NOT EXISTS episodes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			podcast_id INTEGER NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT,
+			audio_url TEXT UNIQUE NOT NULL,
+			pub_date DATETIME,
+			duration INTEGER, -- duration in seconds
+			season_number INTEGER,
+			episode_number INTEGER,
+			image_url TEXT,
+			link TEXT,
+			guid TEXT,
+			status TEXT DEFAULT 'pending', -- pending, approved, rejected
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (podcast_id) REFERENCES podcasts(id)
+		);
+
+		-- Episode guests table - many-to-many relationship
+		CREATE TABLE IF NOT EXISTS episode_guests (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			episode_id INTEGER NOT NULL,
+			host_id INTEGER NOT NULL,
+			role TEXT NOT NULL DEFAULT 'guest', -- guest, host, co-host
+			status TEXT DEFAULT 'pending', -- pending, approved, rejected
+			approval_key TEXT UNIQUE,
+			approval_key_expires_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(episode_id, host_id),
+			FOREIGN KEY (episode_id) REFERENCES episodes(id),
+			FOREIGN KEY (host_id) REFERENCES hosts(id)
+		);
 	`)
 
 	if err != nil {
@@ -98,6 +132,17 @@ func createIndexes() error {
 		CREATE INDEX IF NOT EXISTS idx_host_podcasts_podcast_id ON host_podcasts(podcast_id);
 		CREATE INDEX IF NOT EXISTS idx_host_podcasts_status ON host_podcasts(status);
 		CREATE INDEX IF NOT EXISTS idx_hosts_name ON hosts(name);
+		
+		-- Episode indexes
+		CREATE INDEX IF NOT EXISTS idx_episodes_podcast_id ON episodes(podcast_id);
+		CREATE INDEX IF NOT EXISTS idx_episodes_audio_url ON episodes(audio_url);
+		CREATE INDEX IF NOT EXISTS idx_episodes_status ON episodes(status);
+		CREATE INDEX IF NOT EXISTS idx_episodes_pub_date ON episodes(pub_date);
+		
+		-- Episode guests indexes
+		CREATE INDEX IF NOT EXISTS idx_episode_guests_episode_id ON episode_guests(episode_id);
+		CREATE INDEX IF NOT EXISTS idx_episode_guests_host_id ON episode_guests(host_id);
+		CREATE INDEX IF NOT EXISTS idx_episode_guests_status ON episode_guests(status);
 	`)
 
 	if err != nil {

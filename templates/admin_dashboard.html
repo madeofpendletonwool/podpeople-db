@@ -24,6 +24,11 @@
                     <span>Pending Hosts</span>
                     {{if .PendingHosts}}<span class="nav-badge">{{len .PendingHosts}}</span>{{end}}
                 </a>
+                <a href="#episode-guests" class="nav-item" data-section="episode-guests">
+                    <span class="nav-icon">🎧</span>
+                    <span>Episode Guests</span>
+                    {{if .PendingEpisodeGuests}}<span class="nav-badge">{{len .PendingEpisodeGuests}}</span>{{end}}
+                </a>
                 <a href="#admins" class="nav-item" data-section="admins">
                     <span class="nav-icon">⚙</span>
                     <span>Admin Users</span>
@@ -31,6 +36,10 @@
                 <a href="#stats" class="nav-item" data-section="stats">
                     <span class="nav-icon">◉</span>
                     <span>Statistics</span>
+                </a>
+                <a href="#import" class="nav-item" data-section="import">
+                    <span class="nav-icon">⬆</span>
+                    <span>Import Database</span>
                 </a>
             </div>
             
@@ -105,6 +114,69 @@
                 </div>
             </div>
 
+            <!-- Episode Guests Section -->
+            <div class="content-section" id="episode-guests-section">
+                <div class="episode-guests-container">
+                    {{if .PendingEpisodeGuests}}
+                        <div class="hosts-grid">
+                            {{range .PendingEpisodeGuests}}
+                                <div class="episode-guest-card" id="episode-guest-{{.ID}}">
+                                    <div class="episode-guest-header">
+                                        <div class="guest-type-badge">Episode Guest</div>
+                                        <div class="guest-info">
+                                            <h3>{{.HostName}}</h3>
+                                            <p class="guest-role">{{.Role}}</p>
+                                        </div>
+                                        {{if .HostImg}}
+                                        <img src="/proxy-image?url={{.HostImg}}" 
+                                             alt="{{.HostName}}"
+                                             class="guest-avatar"
+                                             onerror="this.onerror=null; this.src='/static/default-avatar.png';">
+                                        {{else}}
+                                        <div class="guest-avatar-placeholder">{{slice .HostName 0 2}}</div>
+                                        {{end}}
+                                    </div>
+                                    
+                                    <div class="episode-info">
+                                        <h4>Episode: {{.EpisodeTitle}}</h4>
+                                        <p class="podcast-name">Podcast: {{.PodcastTitle}}</p>
+                                        {{if .EpisodeDescription}}
+                                        <p class="episode-description">{{Truncate .EpisodeDescription 150}}</p>
+                                        {{end}}
+                                    </div>
+                                    
+                                    {{if .HostDescription}}
+                                    <div class="host-description">
+                                        <p><strong>Guest Info:</strong> {{.HostDescription}}</p>
+                                    </div>
+                                    {{end}}
+                                    
+                                    {{if .HostLink}}
+                                    <div class="host-link">
+                                        <a href="{{.HostLink}}" target="_blank" class="external-link">View Profile →</a>
+                                    </div>
+                                    {{end}}
+                                    
+                                    <div class="submission-info">
+                                        <p class="submission-date">Submitted: {{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</p>
+                                    </div>
+                                    
+                                    <div class="card-actions">
+                                        <button onclick="approveEpisodeGuest({{.ID}})" class="approve-btn">✓ Approve Guest</button>
+                                        <button onclick="rejectEpisodeGuest({{.ID}})" class="reject-btn">✗ Reject Guest</button>
+                                    </div>
+                                </div>
+                            {{end}}
+                        </div>
+                    {{else}}
+                        <div class="empty-state">
+                            <div class="empty-icon">🎧</div>
+                            <h3>No pending episode guests</h3>
+                            <p>All episode guest submissions have been processed.</p>
+                        </div>
+                    {{end}}
+                </div>
+            </div>
 
             <!-- Admin Users Section -->
             <div class="content-section" id="admins-section">
@@ -139,6 +211,58 @@
                 <h2>Database Statistics</h2>
                 <div class="stats-overview" hx-get="/api/stats" hx-trigger="revealed once" hx-swap="innerHTML">
                     <div class="loading-stats">Loading statistics...</div>
+                </div>
+            </div>
+
+            <!-- Import Database Section -->
+            <div class="content-section" id="import-section">
+                <div class="section-header">
+                    <h2>Import Database</h2>
+                    <p>Upload a SQLite database file to replace the current database. This will completely overwrite all existing data.</p>
+                </div>
+                
+                <div class="import-container">
+                    <div class="warning-box">
+                        <div class="warning-icon">⚠️</div>
+                        <div class="warning-content">
+                            <h3>Warning: This action cannot be undone</h3>
+                            <p>Importing a database will completely replace all current data. Make sure to download a backup first if needed.</p>
+                        </div>
+                    </div>
+                    
+                    <form id="import-form" class="import-form" enctype="multipart/form-data">
+                        <div class="form-field">
+                            <label for="database-file">Select SQLite Database File</label>
+                            <input type="file" id="database-file" name="database" accept=".sqlite,.sqlite3,.db" required>
+                            <small>Accepted formats: .sqlite, .sqlite3, .db</small>
+                        </div>
+                        
+                        <div class="form-field">
+                            <label>
+                                <input type="checkbox" id="confirm-import" name="confirm" required>
+                                I understand this will replace all existing data
+                            </label>
+                        </div>
+                        
+                        <div class="import-actions">
+                            <a href="/api/download-database" class="secondary-button">Download Current Database First</a>
+                            <button type="submit" id="import-button" class="danger-button" disabled>
+                                <span class="btn-text">Import Database</span>
+                                <div class="btn-spinner" style="display: none;"></div>
+                            </button>
+                        </div>
+                        
+                        <div id="import-progress" class="import-progress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                            <p class="progress-text">Importing database...</p>
+                        </div>
+                        
+                        <div id="import-result" class="import-result" style="display: none;">
+                            <!-- Results will be shown here -->
+                        </div>
+                    </form>
                 </div>
             </div>
         </main>
@@ -187,16 +311,19 @@
         // Modern admin dashboard functionality
         let currentMode = 'add';
         
-        // Navigation handling
-        document.querySelectorAll('.nav-item[data-section]').forEach(item => {
-            item.addEventListener('click', function(e) {
-                e.preventDefault();
-                const section = this.dataset.section;
-                switchSection(section);
-                
-                // Update active nav item
-                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                this.classList.add('active');
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Navigation handling
+            document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.dataset.section;
+                    switchSection(section);
+                    
+                    // Update active nav item
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                });
             });
         });
         
@@ -213,16 +340,16 @@
             // Update page title
             const titles = {
                 'pending': 'Pending Host Submissions',
+                'episode-guests': 'Pending Episode Guests',
                 'admins': 'Administrator Accounts',
-                'stats': 'Database Statistics'
+                'stats': 'Database Statistics',
+                'import': 'Import Database'
             };
             document.getElementById('page-title').textContent = titles[section] || 'Dashboard';
         }
 
         // Host approval/rejection
         async function approveHost(hostId) {
-            if (!confirm('Approve this host submission?')) return;
-            
             try {
                 const response = await fetch(`/admin/approve/${hostId}`, {
                     method: 'POST'
@@ -259,6 +386,48 @@
                 }
             } catch (error) {
                 showToast('Error rejecting host', 'error');
+            }
+        }
+
+        // Episode guest approval/rejection
+        async function approveEpisodeGuest(guestId) {
+            
+            try {
+                const response = await fetch(`/admin/approve-episode-guest/${guestId}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const guestCard = document.getElementById(`episode-guest-${guestId}`);
+                    guestCard.style.animation = 'slideOut 0.3s ease-in-out forwards';
+                    setTimeout(() => guestCard.remove(), 300);
+                    showToast('Episode guest approved successfully', 'success');
+                } else {
+                    showToast('Failed to approve episode guest', 'error');
+                }
+            } catch (error) {
+                showToast('Error approving episode guest', 'error');
+            }
+        }
+
+        async function rejectEpisodeGuest(guestId) {
+            if (!confirm('Reject this episode guest submission? This action cannot be undone.')) return;
+            
+            try {
+                const response = await fetch(`/admin/reject-episode-guest/${guestId}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const guestCard = document.getElementById(`episode-guest-${guestId}`);
+                    guestCard.style.animation = 'slideOut 0.3s ease-in-out forwards';
+                    setTimeout(() => guestCard.remove(), 300);
+                    showToast('Episode guest rejected successfully', 'success');
+                } else {
+                    showToast('Failed to reject episode guest', 'error');
+                }
+            } catch (error) {
+                showToast('Error rejecting episode guest', 'error');
             }
         }
 
@@ -378,6 +547,94 @@
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
+
+        // Import functionality
+        document.getElementById('confirm-import').addEventListener('change', function() {
+            document.getElementById('import-button').disabled = !this.checked;
+        });
+
+        document.getElementById('import-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('database-file');
+            const confirmInput = document.getElementById('confirm-import');
+            const importButton = document.getElementById('import-button');
+            const btnText = importButton.querySelector('.btn-text');
+            const btnSpinner = importButton.querySelector('.btn-spinner');
+            const progressDiv = document.getElementById('import-progress');
+            const resultDiv = document.getElementById('import-result');
+            
+            if (!fileInput.files[0]) {
+                showToast('Please select a database file', 'error');
+                return;
+            }
+            
+            if (!confirmInput.checked) {
+                showToast('Please confirm you understand the risks', 'error');
+                return;
+            }
+            
+            // Show loading state
+            importButton.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline-block';
+            progressDiv.style.display = 'block';
+            resultDiv.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('database', fileInput.files[0]);
+            
+            try {
+                const response = await fetch('/admin/import-database', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                // Hide progress
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success-result">
+                            <div class="result-icon">✅</div>
+                            <h3>Import Successful</h3>
+                            <p>${result.message}</p>
+                            <p>Records imported: ${result.recordsImported || 'N/A'}</p>
+                            <button onclick="location.reload()" class="primary-button">Refresh Dashboard</button>
+                        </div>
+                    `;
+                    showToast('Database imported successfully', 'success');
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error-result">
+                            <div class="result-icon">❌</div>
+                            <h3>Import Failed</h3>
+                            <p>${result.error}</p>
+                        </div>
+                    `;
+                    showToast('Import failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <div class="error-result">
+                        <div class="result-icon">❌</div>
+                        <h3>Network Error</h3>
+                        <p>Failed to connect to server: ${error.message}</p>
+                    </div>
+                `;
+                showToast('Network error during import', 'error');
+            } finally {
+                // Reset button state
+                importButton.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
+            }
+        });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {

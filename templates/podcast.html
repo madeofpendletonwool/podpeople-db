@@ -7,7 +7,7 @@
         <link rel="stylesheet" href="/static/styles.css" />
         <link rel="icon" type="image/x-icon" href="/static/podpeople.ico" />
         <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
             rel="stylesheet"
         />
         <script src="https://unpkg.com/htmx.org@1.9.2"></script>
@@ -26,319 +26,349 @@
             }
         </script>
     </head>
-    <body>
-        <div class="container">
-            <a href="/" class="docs-home-link">
-                <img
-                    src="/static/podpeople.png"
-                    alt="PodPeopleDB Logo"
-                    class="logo"
-                />
-            </a>
-            <h1>{{.Podcast.Title}}</h1>
-            <img
-                src="{{.Podcast.Image}}"
-                alt="{{.Podcast.Title}} Artwork"
-                class="podcast-image"
-            />
-            <div class="podcast-info">
-                <p><strong>Author:</strong> {{.Podcast.Author}}</p>
-                <p><strong>Owner:</strong> {{.Podcast.OwnerName}}</p>
-                <p><strong>Description:</strong> {{.Podcast.Description}}</p>
-                <p>
-                    <strong>Website:</strong>
-                    <a href="{{.Podcast.Link}}" target="_blank"
-                        >{{.Podcast.Link}}</a
-                    >
-                </p>
-                <p>
-                    <strong>Feed URL:</strong>
-                    <a href="{{.Podcast.FeedURL}}" target="_blank"
-                        >{{.Podcast.FeedURL}}</a
-                    >
-                </p>
-            </div>
-            <h2>Hosts and Guests</h2>
-            <div id="host-list">
-                {{if .PersonTags}}
-                <h3>Hosts</h3>
-                {{range .Podcast.Hosts}} {{if eq .Role "Host"}}
-                <div class="host-item">
+    <body class="podcast-page">
+        <div class="podcast-container">
+            <!-- Header -->
+            <header class="podcast-header">
+                <a href="/" class="back-home">
                     <img
-                        src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
-                        alt="{{.Name}}"
-                        class="host-image"
-                        onerror="handleImageError(this)"
+                        src="/static/podpeople.png"
+                        alt="PodPeopleDB Logo"
+                        class="header-logo"
                     />
-                    <div class="host-info">
-                        <h3>{{.Name}}</h3>
-                        <p><strong>Role:</strong> {{.Role}}</p>
-                        {{if .Group}}
-                        <p><strong>Group:</strong> {{.Group}}</p>
-                        {{end}} {{if .Href}}<a href="{{.Href}}" target="_blank"
-                            >More Info</a
-                        >{{end}} {{if .Episodes}} {{if gt (len .Episodes) 5}}
-                        <p>
-                            <strong>Associated Episodes:</strong>
-                            <a
-                                href="#"
-                                onclick="toggleEpisodes('{{.Name}}'); return false;"
-                            >
-                                Show/Hide ({{len .Episodes}} episodes)
-                            </a>
-                        </p>
-                        <ul id="episodes-{{.Name}}" style="display: none">
-                            {{range .Episodes}}
-                            <li>{{.}}</li>
-                            {{end}}
-                        </ul>
-                        {{else}}
-                        <p><strong>Associated Episodes:</strong></p>
-                        <ul>
-                            {{range .Episodes}}
-                            <li>{{.}}</li>
-                            {{end}}
-                        </ul>
-                        {{end}} {{end}}
-                    </div>
-                </div>
-                {{end}} {{end}}
+                    <span>Back to Home</span>
+                </a>
+            </header>
 
-                <h3>Guests</h3>
-                {{range .Podcast.Hosts}} {{if eq .Role "Guest"}}
-                <div class="host-item">
+            <!-- Podcast Hero Section -->
+            <section class="podcast-hero">
+                <div class="podcast-artwork">
                     <img
-                        src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
-                        alt="{{.Name}}"
-                        class="host-image"
+                        src="{{.Podcast.Image}}"
+                        alt="{{.Podcast.Title}} Artwork"
+                        class="artwork-image"
                         onerror="handleImageError(this)"
                     />
-                    <div class="host-info">
-                        <h3>{{.Name}}</h3>
-                        <p><strong>Role:</strong> {{.Role}}</p>
-                        {{if .Group}}
-                        <p><strong>Group:</strong> {{.Group}}</p>
-                        {{end}} {{if .Href}}<a href="{{.Href}}" target="_blank"
-                            >More Info</a
-                        >{{end}} {{if .Episodes}} {{if gt (len .Episodes) 5}}
-                        <p>
-                            <strong>Associated Episodes:</strong>
-                            <a
-                                href="#"
-                                onclick="toggleEpisodes('{{.Name}}'); return false;"
-                            >
-                                Show/Hide ({{len .Episodes}} episodes)
-                            </a>
-                        </p>
-                        <ul id="episodes-{{.Name}}" style="display: none">
-                            {{range .Episodes}}
-                            <li>{{.}}</li>
-                            {{end}}
-                        </ul>
-                        {{else}}
-                        <p><strong>Associated Episodes:</strong></p>
-                        <ul>
-                            {{range .Episodes}}
-                            <li>{{.}}</li>
-                            {{end}}
-                        </ul>
-                        {{end}} {{end}}
-                    </div>
                 </div>
-                {{end}} {{end}} {{else}} {{if .Hosts}}
-                <h3>Hosts</h3>
-                {{range $host := .Hosts}} {{range .Podcasts}} {{if eq .Role
-                "Host"}}
-                <div class="host-item" id="host-{{$host.ID}}">
-                    <img
-                        src="{{if $host.Img}}/proxy-image?url={{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
-                        alt="{{$host.Name}}"
-                        class="host-image"
-                        onerror="handleImageError(this)"
-                    />
-                    <div class="host-info">
-                        <h3>{{$host.Name}}</h3>
-                        <p><strong>Role:</strong> {{.Role}}</p>
-                        <p>{{$host.Description}}</p>
-                        <a href="{{$host.Link}}" target="_blank">More Info</a>
-                        {{if $.IsAdmin}}
-                        <div class="admin-actions">
-                            <button
-                                onclick="openEditModal({{$host.ID}}, '{{$host.Name}}', '{{$host.Description}}', '{{$host.Link}}', '{{$host.Img}}', '{{.Role}}')"
-                                class="edit-host"
-                            >
-                                Edit
-                            </button>
-                            <button
-                                hx-delete="/delete-host/{{$host.ID}}"
-                                hx-target="#host-{{$host.ID}}"
-                                hx-swap="outerHTML"
-                                class="delete-host"
-                            >
-                                Delete
-                            </button>
+                <div class="podcast-details">
+                    <h1 class="podcast-title">{{.Podcast.Title}}</h1>
+                    <div class="podcast-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">By</span>
+                            <span class="meta-value">{{.Podcast.Author}}</span>
+                        </div>
+                        {{if ne .Podcast.OwnerName .Podcast.Author}}
+                        <div class="meta-item">
+                            <span class="meta-label">Owner</span>
+                            <span class="meta-value">{{.Podcast.OwnerName}}</span>
                         </div>
                         {{end}}
                     </div>
-                </div>
-                {{end}} {{break}} {{end}} {{end}}
-
-                <h3>Guests</h3>
-                {{range $host := .Hosts}} {{range .Podcasts}} {{if eq .Role
-                "Guest"}}
-                <div class="host-item" id="host-{{$host.ID}}">
-                    <img
-                        src="{{if $host.Img}}/proxy-image?url={{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
-                        alt="{{$host.Name}}"
-                        class="host-image"
-                        onerror="handleImageError(this)"
-                    />
-                    <div class="host-info">
-                        <h3>{{$host.Name}}</h3>
-                        <p><strong>Role:</strong> {{.Role}}</p>
-                        <p>{{$host.Description}}</p>
-                        <a href="{{$host.Link}}" target="_blank">More Info</a>
-                        {{if $.IsAdmin}}
-                        <button
-                            hx-delete="/delete-host/{{$host.ID}}"
-                            hx-target="#host-{{$host.ID}}"
-                            hx-swap="outerHTML"
-                            class="delete-host"
-                        >
-                            Delete
-                        </button>
-                        {{end}}
+                    <p class="podcast-description">{{.Podcast.Description}}</p>
+                    <div class="podcast-links">
+                        <a href="{{.Podcast.Link}}" target="_blank" class="podcast-link website-link">
+                            <span>🌐</span>
+                            Visit Website
+                        </a>
+                        <a href="{{.Podcast.FeedURL}}" target="_blank" class="podcast-link feed-link">
+                            <span>📡</span>
+                            RSS Feed
+                        </a>
                     </div>
                 </div>
-                {{end}} {{break}} {{end}} {{end}} {{else}}
-                <p>No hosts or guests found for this podcast.</p>
+            </section>
+            <!-- Hosts and Guests Section -->
+            <section class="people-section">
+                <div class="section-header">
+                    <h2>People</h2>
+                    <p class="section-subtitle">Hosts and guests associated with this podcast</p>
+                </div>
+                
+                <div class="people-grid">
+                    {{if .PersonTags}}
+                        <!-- From feed data -->
+                        {{range .Hosts}}
+                        <div class="person-card {{(index .Podcasts 0).Role | lower}}">
+                            <div class="person-avatar">
+                                <img
+                                    src="{{if .Img}}{{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                    alt="{{.Name}}"
+                                    onerror="handleImageError(this)"
+                                />
+                                <div class="person-role-badge">{{(index .Podcasts 0).Role}}</div>
+                            </div>
+                            <div class="person-info">
+                                <h3 class="person-name">{{.Name}}</h3>
+                                {{if .Podcasts}}{{if (index .Podcasts 0).Role}}
+                                <p class="person-group">{{(index .Podcasts 0).Role}}</p>
+                                {{end}}{{end}}
+                                {{if .Link}}
+                                <a href="{{.Link}}" target="_blank" class="person-link">
+                                    More Info →
+                                </a>
+                                {{end}}
+                                {{if .Episodes}}
+                                <div class="person-episodes">
+                                    <div class="episodes-count">{{len .Episodes}} episodes</div>
+                                    <ul class="episodes-list">
+                                        {{range $index, $episode := .Episodes}}
+                                        {{if lt $index 5}}
+                                        <li>{{$episode}}</li>
+                                        {{end}}
+                                        {{end}}
+                                    </ul>
+                                    {{if gt (len .Episodes) 5}}
+                                    <button 
+                                        class="see-more-btn"
+                                        data-host-name="{{.Name}}"
+                                        data-host-href="{{.Link}}"
+                                        data-host-group="{{if .Podcasts}}{{(index .Podcasts 0).Role}}{{end}}"
+                                        data-host-episodes='[{{range $i, $ep := .Episodes}}{{if $i}},{{end}}"{{$ep | js}}"{{end}}]'
+                                        onclick="openHostModal(this); return false;"
+                                    >
+                                        See More ({{sub (len .Episodes) 5}} more)
+                                    </button>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                            </div>
+                        </div>
+                        {{end}}
+                    {{else}}
+                        <!-- From database -->
+                        {{if .Hosts}}
+                            {{range $host := .Hosts}}
+                                {{range .Podcasts}}
+                                <div class="person-card {{.Role | lower}}" id="host-{{$host.ID}}">
+                                    <div class="person-avatar">
+                                        <img
+                                            src="{{if $host.Img}}/proxy-image?url={{$host.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                            alt="{{$host.Name}}"
+                                            onerror="handleImageError(this)"
+                                        />
+                                        <div class="person-role-badge">{{.Role}}</div>
+                                    </div>
+                                    <div class="person-info">
+                                        <h3 class="person-name">{{$host.Name}}</h3>
+                                        <p class="person-description">{{$host.Description}}</p>
+                                        <a href="{{$host.Link}}" target="_blank" class="person-link">
+                                            More Info →
+                                        </a>
+                                        {{if $.IsAdmin}}
+                                        <div class="admin-actions">
+                                            <button
+                                                onclick="openEditModal({{$host.ID}}, '{{$host.Name}}', '{{$host.Description}}', '{{$host.Link}}', '{{$host.Img}}', '{{.Role}}')"
+                                                class="btn-edit"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                hx-delete="/delete-host/{{$host.ID}}"
+                                                hx-target="#host-{{$host.ID}}"
+                                                hx-swap="outerHTML"
+                                                class="btn-delete"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                        {{end}}
+                                    </div>
+                                </div>
+                                {{break}}
+                                {{end}}
+                            {{end}}
+                        {{else}}
+                        <div class="empty-state">
+                            <div class="empty-icon">👥</div>
+                            <p>No hosts or guests found for this podcast.</p>
+                        </div>
+                        {{end}}
+                    {{end}}
+                </div>
+                
+                {{if .HasMoreHosts}}
+                <div class="show-more-hosts-container">
+                    <button class="show-more-hosts-btn" onclick="openAllHostsModal(); return false;">
+                        Show More Hosts ({{sub .TotalHosts 6}} more)
+                    </button>
+                </div>
                 {{end}}
+            </section>
 
-                <div class="add-host-section">
-                    <h2>Add New Host/Guest</h2>
+            <!-- Add Host/Guest Section - Only show if no Podcasting 2.0 hosts -->
+            {{if not .Podcast.Hosts}}
+            <section class="add-person-section">
+                <div class="section-header">
+                    <h2>Add Host or Guest</h2>
+                    <p class="section-subtitle">Submit a new host or guest for this podcast</p>
+                </div>
+                
+                <div class="add-person-form-container">
                     <form
                         id="host-form"
+                        class="add-person-form"
                         hx-post="/add-host"
                         hx-target="#pending-hosts"
                         hx-swap="none"
                     >
-                        <input
-                            type="hidden"
-                            name="podcastId"
-                            value="{{.Podcast.ID}}"
-                        />
-                        <div class="relative">
-                            <input
-                                type="text"
-                                name="name"
-                                placeholder="Name"
-                                required
-                                hx-get="/search-hosts"
-                                hx-trigger="keyup changed delay:300ms"
-                                hx-target="#search-results"
-                                hx-swap="innerHTML"
-                            />
-                            <div
-                                id="search-results"
-                                class="absolute z-10 w-full mt-1 bg-gray-800 rounded-md shadow-lg max-h-60 overflow-auto hidden"
-                            ></div>
+                        <input type="hidden" name="podcastId" value="{{.Podcast.ID}}" />
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="name">Name</label>
+                                <div class="input-with-search">
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        id="name"
+                                        placeholder="Full name"
+                                        required
+                                        hx-get="/search-hosts"
+                                        hx-trigger="keyup changed delay:300ms"
+                                        hx-target="#search-results"
+                                        hx-swap="innerHTML"
+                                    />
+                                    <div id="search-results" class="search-dropdown hidden"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="role">Role</label>
+                                <select name="role" id="role" required>
+                                    <option value="">Select Role</option>
+                                    <option value="Host">Host</option>
+                                    <option value="Guest">Guest</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label for="description">Description</label>
+                                <textarea
+                                    name="description"
+                                    id="description"
+                                    placeholder="Brief description of this person"
+                                    required
+                                    rows="3"
+                                ></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="link">Link</label>
+                                <input
+                                    type="url"
+                                    name="link"
+                                    id="link"
+                                    placeholder="https://example.com"
+                                    required
+                                />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="img">Image URL (Optional)</label>
+                                <input
+                                    type="url"
+                                    name="img"
+                                    id="img"
+                                    placeholder="https://example.com/image.jpg"
+                                />
+                            </div>
                         </div>
-                        <select name="role" required>
-                            <option value="">Select Role</option>
-                            <option value="Host">Host</option>
-                            <option value="Guest">Guest</option>
-                        </select>
-                        <textarea
-                            name="description"
-                            placeholder="Description"
-                            required
-                        ></textarea>
-                        <input
-                            type="url"
-                            name="link"
-                            placeholder="Link (Wiki, Github, etc.)"
-                            required
-                        />
-                        <input
-                            type="url"
-                            name="img"
-                            placeholder="Image URL (optional)"
-                        />
-                        <button type="submit">Add Host/Guest</button>
+                        
+                        <button type="submit" class="submit-btn">
+                            Add Person
+                        </button>
                     </form>
+                    
+                    <div id="pending-hosts" class="pending-submissions">
+                        <!-- Newly submitted hosts will be added here -->
+                    </div>
                 </div>
+            </section>
+            {{end}}
 
-                <div id="pending-hosts">
-                    <!-- Newly submitted hosts will be added here -->
+            <!-- Episodes Section -->
+            <section class="episodes-section">
+                <div class="section-header">
+                    <h2>Episodes</h2>
+                    <p class="section-subtitle">Recent episodes from this podcast feed</p>
                 </div>
-                {{end}}
-            </div>
+                
+                <div id="episodes-container" 
+                     hx-get="/api/podcast/{{.Podcast.ID}}/episodes" 
+                     hx-trigger="load once"
+                     hx-indicator="#episodes-loading">
+                    <div id="episodes-loading" class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Loading episodes...</p>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <template id="pending-host-template">
-            <div class="host-item pending-host">
-                <span class="pending-label">Pending Approval</span>
-                <img
-                    src="/proxy-image?url=${img || '/static/default-avatar.png'}"
-                    alt="${name}"
-                    class="host-image"
-                    onerror="this.onerror=null; this.src='/static/default-avatar.png'"
-                />
-                <div class="host-info">
-                    <h3>${name}</h3>
-                    <p><strong>Role:</strong> ${role}</p>
-                    <p>${description}</p>
-                    <a href="${link}" target="_blank">More Info</a>
+            <div class="person-card pending">
+                <div class="pending-banner">Pending Approval</div>
+                <div class="person-avatar">
+                    <img
+                        src="/proxy-image?url=${img || '/static/default-avatar.png'}"
+                        alt="${name}"
+                        onerror="this.onerror=null; this.src='/static/default-avatar.png'"
+                    />
+                    <div class="person-role-badge">${role}</div>
+                </div>
+                <div class="person-info">
+                    <h3 class="person-name">${name}</h3>
+                    <p class="person-description">${description}</p>
+                    <a href="${link}" target="_blank" class="person-link">More Info →</a>
                 </div>
             </div>
         </template>
 
+        <!-- Edit Host Modal -->
         <div id="edit-modal" class="modal" style="display: none">
+            <div class="modal-backdrop"></div>
             <div class="modal-content">
-                <span class="close" onclick="closeEditModal()">&times;</span>
-                <h2>Edit Host</h2>
-                <form
-                    id="edit-host-form"
-                    hx-put="/edit-host"
-                    hx-target=""
-                    hx-swap="outerHTML"
-                >
+                <div class="modal-header">
+                    <h2>Edit Person</h2>
+                    <button class="modal-close" onclick="closeEditModal()">×</button>
+                </div>
+                
+                <form id="edit-host-form" class="modal-form" hx-put="/edit-host" hx-target="" hx-swap="outerHTML">
                     <input type="hidden" name="hostId" id="edit-host-id" />
-                    <input
-                        type="text"
-                        name="name"
-                        id="edit-name"
-                        placeholder="Name"
-                        required
-                    />
-                    <select name="role" id="edit-role" required>
-                        <option value="Host">Host</option>
-                        <option value="Guest">Guest</option>
-                    </select>
-                    <textarea
-                        name="description"
-                        id="edit-description"
-                        placeholder="Description"
-                        required
-                    ></textarea>
-                    <input
-                        type="url"
-                        name="link"
-                        id="edit-link"
-                        placeholder="Link (Wiki, Github, etc.)"
-                        required
-                    />
-                    <input
-                        type="url"
-                        name="img"
-                        id="edit-img"
-                        placeholder="Image URL (optional)"
-                    />
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="edit-name">Name</label>
+                            <input type="text" name="name" id="edit-name" placeholder="Full name" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-role">Role</label>
+                            <select name="role" id="edit-role" required>
+                                <option value="Host">Host</option>
+                                <option value="Guest">Guest</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="edit-description">Description</label>
+                            <textarea name="description" id="edit-description" placeholder="Brief description" required rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-link">Link</label>
+                            <input type="url" name="link" id="edit-link" placeholder="https://example.com" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-img">Image URL</label>
+                            <input type="url" name="img" id="edit-img" placeholder="https://example.com/image.jpg" />
+                        </div>
+                    </div>
+                    
                     <div class="modal-buttons">
-                        <button type="button" onclick="closeEditModal()">
-                            Cancel
-                        </button>
-                        <button type="submit">Save Changes</button>
+                        <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -365,15 +395,6 @@
                                 return;
                             }
 
-                            const pendingHost = document.createElement("div");
-                            pendingHost.innerHTML = template.innerHTML;
-
-                            // Update template with host info
-                            pendingHost.querySelector("img").src =
-                                newHost.img || "/static/default-avatar.png";
-                            pendingHost.querySelector("h3").textContent =
-                                newHost.name;
-
                             // Safely access podcasts array
                             let role = "Unknown";
                             if (
@@ -383,14 +404,16 @@
                                 role = newHost.podcasts[0].role || "Unknown";
                             }
 
-                            pendingHost.querySelector(
-                                "p strong",
-                            ).nextSibling.textContent = " " + role;
-                            pendingHost.querySelector(
-                                "p:nth-of-type(2)",
-                            ).textContent = newHost.description || "";
-                            pendingHost.querySelector("a").href =
-                                newHost.link || "#";
+                            // Use template replacement approach instead of DOM manipulation
+                            let templateHTML = template.innerHTML;
+                            templateHTML = templateHTML.replace(/\$\{img \|\| '\/static\/default-avatar\.png'\}/g, newHost.img || '/static/default-avatar.png');
+                            templateHTML = templateHTML.replace(/\$\{name\}/g, newHost.name || '');
+                            templateHTML = templateHTML.replace(/\$\{role\}/g, role);
+                            templateHTML = templateHTML.replace(/\$\{description\}/g, newHost.description || '');
+                            templateHTML = templateHTML.replace(/\$\{link\}/g, newHost.link || '#');
+
+                            const pendingHost = document.createElement("div");
+                            pendingHost.innerHTML = templateHTML;
 
                             event.detail.target.appendChild(
                                 pendingHost.firstElementChild,
@@ -512,6 +535,159 @@
                     }
                 },
             );
+
+            // Host details modal functions
+            function openHostModal(button) {
+                const hostName = button.getAttribute('data-host-name');
+                const hostHref = button.getAttribute('data-host-href');
+                const hostGroup = button.getAttribute('data-host-group');
+                const episodesData = button.getAttribute('data-host-episodes');
+                
+                let episodes = [];
+                try {
+                    episodes = JSON.parse(episodesData || '[]');
+                } catch (e) {
+                    console.error('Error parsing episodes data:', e, 'Raw data:', episodesData);
+                    episodes = [];
+                }
+
+                // Populate modal content
+                document.getElementById('host-modal-name').textContent = hostName;
+                document.getElementById('host-modal-group').textContent = hostGroup || 'Host';
+                
+                const linkElement = document.getElementById('host-modal-link');
+                if (hostHref) {
+                    linkElement.href = hostHref;
+                    linkElement.style.display = 'block';
+                } else {
+                    linkElement.style.display = 'none';
+                }
+
+                const episodesList = document.getElementById('host-modal-episodes');
+                episodesList.innerHTML = '';
+                episodes.forEach(episode => {
+                    const li = document.createElement('li');
+                    li.textContent = episode;
+                    episodesList.appendChild(li);
+                });
+
+                document.getElementById('host-modal').style.display = 'flex';
+            }
+
+            function closeHostModal() {
+                document.getElementById('host-modal').style.display = 'none';
+            }
+
+            // All hosts modal functions
+            function openAllHostsModal() {
+                const allHosts = JSON.parse(decodeURIComponent("{{.OriginalHostsJSON}}"));
+                const personTags = {{.PersonTags}};
+                
+                console.log('All hosts data:', allHosts);
+                console.log('Person tags:', personTags);
+                
+                const hostsList = document.getElementById('all-hosts-list');
+                hostsList.innerHTML = '';
+                
+                if (personTags && allHosts) {
+                    // Show Podcast 2.0 hosts
+                    allHosts.forEach(host => {
+                        console.log('Processing host:', host);
+                        const hostDiv = document.createElement('div');
+                        hostDiv.className = 'all-hosts-item';
+                        const hostName = (host.Name || host.name || 'Unknown Host').replace(/\+/g, ' ');
+                        const hostRole = host.Role || host.role || 'Host';
+                        const hostImg = host.Img || host.img || '/static/default-avatar.png';
+                        const hostHref = host.Href || host.href;
+                        const hostGroup = host.Group || host.group;
+                        
+                        hostDiv.innerHTML = `
+                            <div class="host-item-avatar">
+                                <img src="${hostImg}" alt="${hostName}" onerror="handleImageError(this)" />
+                                <div class="host-item-role">${hostRole}</div>
+                            </div>
+                            <div class="host-item-info">
+                                <h4>${hostName}</h4>
+                                ${hostGroup ? `<p class="host-group">${hostGroup}</p>` : ''}
+                                ${hostHref ? `<a href="${hostHref}" target="_blank" class="host-link">More Info →</a>` : ''}
+                                ${(host.Episodes || host.episodes) && (host.Episodes || host.episodes).length > 0 ? `
+                                    <div class="host-episodes-section">
+                                        <p class="host-episodes-count">${(host.Episodes || host.episodes).length} episodes</p>
+                                        <ul class="host-episodes-preview">
+                                            ${(host.Episodes || host.episodes).slice(0, 5).map(ep => `<li>${ep || 'Untitled Episode'}</li>`).join('')}
+                                        </ul>
+                                        ${(host.Episodes || host.episodes).length > 5 ? `<p class="more-episodes">and ${(host.Episodes || host.episodes).length - 5} more...</p>` : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                        hostsList.appendChild(hostDiv);
+                    });
+                } else {
+                    // Show database hosts - we would need to pass all hosts for this to work properly
+                    // For now, show a message
+                    hostsList.innerHTML = '<p>All hosts are displayed above.</p>';
+                }
+                
+                document.getElementById('all-hosts-modal').style.display = 'flex';
+            }
+
+            function closeAllHostsModal() {
+                document.getElementById('all-hosts-modal').style.display = 'none';
+            }
+
+            // Close modal when clicking outside
+            document.addEventListener('click', function(e) {
+                const hostModal = document.getElementById('host-modal');
+                const allHostsModal = document.getElementById('all-hosts-modal');
+                if (e.target === hostModal) {
+                    closeHostModal();
+                }
+                if (e.target === allHostsModal) {
+                    closeAllHostsModal();
+                }
+            });
         </script>
+
+        <!-- Host Details Modal -->
+        <div id="host-modal" class="host-details-modal" style="display: none;">
+            <div class="modal-backdrop" onclick="closeHostModal()"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="host-modal-name">Host Name</h2>
+                    <span class="modal-close" onclick="closeHostModal()">×</span>
+                </div>
+                <div class="modal-body">
+                    <div class="host-modal-info">
+                        <p class="host-modal-role" id="host-modal-group">Host</p>
+                        <a id="host-modal-link" href="#" target="_blank" class="host-modal-link">
+                            More Info →
+                        </a>
+                    </div>
+                    <div class="host-modal-episodes">
+                        <h3>All Episodes</h3>
+                        <ul id="host-modal-episodes" class="episodes-modal-list">
+                            <!-- Episodes will be populated by JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Hosts Modal -->
+        <div id="all-hosts-modal" class="all-hosts-modal" style="display: none;">
+            <div class="modal-backdrop" onclick="closeAllHostsModal()"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>All Hosts & Guests</h2>
+                    <span class="modal-close" onclick="closeAllHostsModal()">×</span>
+                </div>
+                <div class="modal-body">
+                    <div id="all-hosts-list" class="all-hosts-list">
+                        <!-- Hosts will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </body>
 </html>

@@ -14,6 +14,7 @@ func (s *Server) registerRoutes() {
 	s.Router.Get("/podcast/{id}", s.PodcastHandler)
 	s.Router.Get("/podcast/", s.PodcastHandler) // For query param version
 	s.Router.Post("/add-host", s.AddHostHandler)
+	s.Router.Post("/add-episode-guest", s.AddEpisodeGuestHandler)
 	s.Router.Get("/search-hosts", s.SearchHostsHandler)
 	s.Router.Get("/get-host-details", s.GetHostDetailsHandler)
 	s.Router.Get("/proxy-image", s.ProxyImageHandler)
@@ -36,11 +37,14 @@ func (s *Server) registerRoutes() {
 			r.Get("/dashboard", s.AdminDashboardHandler)
 			r.Post("/approve/{id}", s.ApproveHostHandler)
 			r.Post("/reject/{id}", s.RejectHostHandler)
+			r.Post("/approve-episode-guest/{id}", s.ApproveEpisodeGuestHandler)
+			r.Post("/reject-episode-guest/{id}", s.RejectEpisodeGuestHandler)
 			r.Post("/add-admin", s.AddAdminHandler)
 			r.Put("/edit-admin", s.EditAdminHandler)
 			r.Delete("/delete-admin/{id}", s.DeleteAdminHandler)
 			r.Put("/edit-host", s.EditHostHandler)
 			r.Delete("/delete-host/{id}", s.DeleteHostHandler)
+			r.Post("/import-database", s.ImportDatabaseHandler)
 		})
 
 		// Auto-approve route (special case, uses approval key)
@@ -50,6 +54,7 @@ func (s *Server) registerRoutes() {
 	// API routes
 	s.Router.Route("/api", func(r chi.Router) {
 		r.Get("/podcast/{id}", s.GetPodcastAPI)
+		r.Get("/podcast/{id}/episodes", s.GetEpisodesHandler)
 		r.Get("/hosts/{id}", s.GetHostsAPI)
 		r.Get("/download-database", s.DownloadDatabaseHandler)
 		r.Get("/recent-hosts", s.GetRecentHostsHandler)

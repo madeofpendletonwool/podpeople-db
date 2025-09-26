@@ -280,3 +280,20 @@ func (s *HostService) GetPopularPodcasts(limit int) ([]models.PodcastSummary, er
 
 	return podcasts, nil
 }
+
+// CreateHost creates a new host and returns it
+func (s *HostService) CreateHost(name, description, link, img, podcastTitle, role string) (*models.Host, error) {
+	host := models.Host{
+		Name:        name,
+		Description: description,
+		Link:        link,
+		Img:         img,
+	}
+
+	err := host.Create(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return &host, nil
+}

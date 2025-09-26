@@ -36,6 +36,7 @@ type Host struct {
 	Img         string               `json:"img"`
 	CreatedAt   time.Time            `json:"createdAt"`
 	Podcasts    []PodcastAssociation `json:"podcasts,omitempty"`
+	Episodes    []string             `json:"episodes,omitempty"` // For Podcast 2.0 person episodes
 }
 
 // PodcastAssociation represents a relationship between a host and a podcast
@@ -68,4 +69,41 @@ type PodcastSummary struct {
 	Title       string `json:"title"`
 	HostCount   int    `json:"host_count"`
 	Description string `json:"description"`
+}
+
+// EpisodeSummary represents a summary of an episode for display
+type EpisodeSummary struct {
+	ID            int       `json:"id"`
+	Title         string    `json:"title"`
+	Description   string    `json:"description"`
+	AudioURL      string    `json:"audio_url"`
+	PubDate       time.Time `json:"pub_date"`
+	Duration      int       `json:"duration"`
+	SeasonNumber  *int      `json:"season_number,omitempty"`
+	EpisodeNumber *int      `json:"episode_number,omitempty"`
+	ImageURL      string    `json:"image_url,omitempty"`
+	Link          string    `json:"link,omitempty"`
+	GuestCount    int       `json:"guest_count"`
+	CanAddGuests  bool      `json:"can_add_guests"` // true if this episode allows guest submissions
+	Guests        []Host    `json:"guests,omitempty"` // approved guests for this episode
+}
+
+// EpisodeGuestWithDetails represents episode guest with full episode and host details
+type EpisodeGuestWithDetails struct {
+	ID                    int       `json:"id"`
+	EpisodeID             int       `json:"episode_id"`
+	HostID                int       `json:"host_id"`
+	Role                  string    `json:"role"`
+	Status                string    `json:"status"`
+	CreatedAt             time.Time `json:"created_at"`
+	// Episode details
+	EpisodeTitle       string    `json:"episode_title"`
+	EpisodeDescription string    `json:"episode_description"`
+	PodcastID          int       `json:"podcast_id"`
+	PodcastTitle       string    `json:"podcast_title"`
+	// Host details
+	HostName        string `json:"host_name"`
+	HostDescription string `json:"host_description"`
+	HostLink        string `json:"host_link"`
+	HostImg         string `json:"host_img"`
 }

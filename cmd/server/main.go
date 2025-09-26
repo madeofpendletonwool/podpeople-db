@@ -45,9 +45,10 @@ func main() {
 	podcastService := services.NewPodcastService(cfg)
 	hostService := services.NewHostService(cfg, notificationService, db.DB)
 	adminService := services.NewAdminService(cfg)
+	episodeService := services.NewEpisodeService(cfg, db.DB)
 
 	// Initialize server
-	server := api.NewServer(cfg, tmpl, podcastService, hostService, adminService)
+	server := api.NewServer(cfg, tmpl, podcastService, hostService, adminService, episodeService)
 
 	// Configure HTTP server
 	httpServer := &http.Server{

@@ -39,6 +39,11 @@ func (s *AdminService) GetPendingHosts() ([]models.Host, error) {
 	return models.GetPendingHosts(db.DB)
 }
 
+// GetPendingEpisodeGuests gets all episode guests pending approval
+func (s *AdminService) GetPendingEpisodeGuests() ([]models.EpisodeGuestWithDetails, error) {
+	return models.GetPendingEpisodeGuestsWithDetails(db.DB)
+}
+
 // GetAllAdmins gets all admin users
 func (s *AdminService) GetAllAdmins() ([]models.Admin, error) {
 	return models.GetAllAdmins(db.DB)
