@@ -115,6 +115,39 @@ func createTables() error {
 			FOREIGN KEY (episode_id) REFERENCES episodes(id),
 			FOREIGN KEY (host_id) REFERENCES hosts(id)
 		);
+
+		-- Import sessions table - tracks dataset imports
+		CREATE TABLE IF NOT EXISTS import_sessions (
+			id TEXT PRIMARY KEY,
+			import_type TEXT NOT NULL, -- 'dataset', 'full_db'
+			filename TEXT,
+			total_records INTEGER DEFAULT 0,
+			processed_records INTEGER DEFAULT 0,
+			conflicts_count INTEGER DEFAULT 0,
+			status TEXT DEFAULT 'processing', -- processing, completed, failed
+			started_by INTEGER,
+			started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			completed_at DATETIME,
+			FOREIGN KEY (started_by) REFERENCES admins(id)
+		);
+
+		-- Staging conflicts table - stores conflicted records during import
+		CREATE TABLE IF NOT EXISTS staging_conflicts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			conflict_type TEXT NOT NULL, -- 'host', 'episode', 'episode_guest', 'podcast'
+			import_session_id TEXT NOT NULL,
+			existing_record_id INTEGER,
+			existing_data TEXT, -- JSON representation of existing record
+			incoming_data TEXT, -- JSON representation of incoming record
+			conflict_fields TEXT, -- JSON array of fields that differ
+			resolution TEXT DEFAULT 'pending', -- pending, keep_existing, use_incoming, merged
+			resolved_data TEXT, -- JSON of resolved record (if merged)
+			resolved_at DATETIME,
+			resolved_by INTEGER,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (import_session_id) REFERENCES import_sessions(id),
+			FOREIGN KEY (resolved_by) REFERENCES admins(id)
+		);
 	`)
 
 	if err != nil {
@@ -143,6 +176,16 @@ func createIndexes() error {
 		CREATE INDEX IF NOT EXISTS idx_episode_guests_episode_id ON episode_guests(episode_id);
 		CREATE INDEX IF NOT EXISTS idx_episode_guests_host_id ON episode_guests(host_id);
 		CREATE INDEX IF NOT EXISTS idx_episode_guests_status ON episode_guests(status);
+		
+		-- Import sessions indexes
+		CREATE INDEX IF NOT EXISTS idx_import_sessions_status ON import_sessions(status);
+		CREATE INDEX IF NOT EXISTS idx_import_sessions_started_by ON import_sessions(started_by);
+		CREATE INDEX IF NOT EXISTS idx_import_sessions_started_at ON import_sessions(started_at);
+		
+		-- Staging conflicts indexes
+		CREATE INDEX IF NOT EXISTS idx_staging_conflicts_session_id ON staging_conflicts(import_session_id);
+		CREATE INDEX IF NOT EXISTS idx_staging_conflicts_resolution ON staging_conflicts(resolution);
+		CREATE INDEX IF NOT EXISTS idx_staging_conflicts_type ON staging_conflicts(conflict_type);
 	`)
 
 	if err != nil {

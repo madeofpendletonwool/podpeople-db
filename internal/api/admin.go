@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/madeofpendletonwool/podpeople-db/internal/db"
@@ -524,4 +525,44 @@ func (s *Server) ImportDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	log.Printf("Database imported successfully from file: %s (%d records)", header.Filename, recordCount)
+}
+
+// AdminExportFullDatabaseHandler handles exporting the complete database for admins
+func (s *Server) AdminExportFullDatabaseHandler(w http.ResponseWriter, r *http.Request) {
+	// Open the database file
+	dbPath := s.Config.Database.Path
+	dbFile, err := os.Open(dbPath)
+	if err != nil {
+		log.Printf("Error opening database file for export: %v", err)
+		http.Error(w, "Unable to open database file", http.StatusInternalServerError)
+		return
+	}
+	defer dbFile.Close()
+
+	// Get file info for size
+	fileInfo, err := dbFile.Stat()
+	if err != nil {
+		log.Printf("Error getting database file info: %v", err)
+		http.Error(w, "Unable to get file information", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate filename with timestamp
+	timestamp := time.Now().Format("2006-01-02-15-04-05")
+	filename := fmt.Sprintf("podpeople-full-backup-%s.sqlite", timestamp)
+
+	// Set headers for file download
+	w.Header().Set("Content-Type", "application/x-sqlite3")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	w.Header().Set("Content-Length", strconv.FormatInt(fileInfo.Size(), 10))
+
+	// Copy the file to the response writer
+	_, err = io.Copy(w, dbFile)
+	if err != nil {
+		log.Printf("Error during full database export: %v", err)
+		http.Error(w, "Error during file transfer", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Full database exported successfully as %s", filename)
 }

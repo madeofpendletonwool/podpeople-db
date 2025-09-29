@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{.Podcast.Title}} - PodPeopleDB</title>
         <link rel="stylesheet" href="/static/styles.css" />
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
         <link rel="icon" type="image/x-icon" href="/static/podpeople.ico" />
         <link
             href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
@@ -232,14 +233,8 @@
                                 </div>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="role">Role</label>
-                                <select name="role" id="role" required>
-                                    <option value="">Select Role</option>
-                                    <option value="Host">Host</option>
-                                    <option value="Guest">Guest</option>
-                                </select>
-                            </div>
+                            <!-- Hidden role field - automatically set to Host for podcast-level submissions -->
+                            <input type="hidden" name="role" id="role" value="Host" />
                             
                             <div class="form-group full-width">
                                 <label for="description">Description</label>
@@ -342,13 +337,8 @@
                             <input type="text" name="name" id="edit-name" placeholder="Full name" required />
                         </div>
                         
-                        <div class="form-group">
-                            <label for="edit-role">Role</label>
-                            <select name="role" id="edit-role" required>
-                                <option value="Host">Host</option>
-                                <option value="Guest">Guest</option>
-                            </select>
-                        </div>
+                        <!-- Hidden role field - automatically set to Host for podcast-level edits -->
+                        <input type="hidden" name="role" id="edit-role" value="Host" />
                         
                         <div class="form-group full-width">
                             <label for="edit-description">Description</label>
@@ -456,8 +446,7 @@
                         const host = JSON.parse(evt.detail.xhr.response);
                         document.querySelector('input[name="name"]').value =
                             host.name;
-                        document.querySelector('select[name="role"]').value =
-                            host.role;
+                        // Role is automatically set to Host, no need to update
                         document.querySelector(
                             'textarea[name="description"]',
                         ).value = host.description;
@@ -504,7 +493,7 @@
                 // Set the form values
                 document.getElementById("edit-host-id").value = id;
                 document.getElementById("edit-name").value = name;
-                document.getElementById("edit-role").value = role;
+                // Role is automatically set to Host, no need to update
                 document.getElementById("edit-description").value = description;
                 document.getElementById("edit-link").value = link;
                 document.getElementById("edit-img").value = img || "";

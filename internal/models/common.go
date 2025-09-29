@@ -57,10 +57,44 @@ type Admin struct {
 
 // Stats represents database statistics
 type Stats struct {
-	TotalHosts    int `json:"total_hosts"`
-	TotalPodcasts int `json:"total_podcasts"`
-	PendingHosts  int `json:"pending_hosts"`
-	ApprovedHosts int `json:"approved_hosts"`
+	TotalHosts          int `json:"total_hosts"`
+	TotalPodcasts       int `json:"total_podcasts"`
+	PendingHosts        int `json:"pending_hosts"`
+	ApprovedHosts       int `json:"approved_hosts"`
+	EpisodesWithGuests  int `json:"episodes_with_guests"`
+	PendingEpisodeGuests int `json:"pending_episode_guests"`
+}
+
+// PublicDataset represents the public exportable dataset
+type PublicDataset struct {
+	ExportDate    time.Time           `json:"export_date"`
+	Version       string              `json:"version"`
+	Hosts         []Host              `json:"hosts"`
+	Podcasts      []Podcast           `json:"podcasts"`
+	HostPodcasts  []HostPodcast       `json:"host_podcasts"`
+	Episodes      []Episode           `json:"episodes"`
+	EpisodeGuests []EpisodeGuest      `json:"episode_guests"`
+}
+
+// HostPodcast represents the many-to-many relationship between hosts and podcasts
+type HostPodcast struct {
+	HostID    int    `json:"host_id"`
+	PodcastID int    `json:"podcast_id"`
+	Role      string `json:"role"`
+	Status    string `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// EpisodeGuest represents a guest appearance on an episode
+type EpisodeGuest struct {
+	ID                   int       `json:"id"`
+	EpisodeID            int       `json:"episode_id"`
+	HostID               int       `json:"host_id"`
+	Role                 string    `json:"role"`
+	Status               string    `json:"status"`
+	ApprovalKey          string    `json:"approval_key,omitempty"`
+	ApprovalKeyExpiresAt time.Time `json:"approval_key_expires_at,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
 }
 
 // PodcastSummary represents a summary of a podcast

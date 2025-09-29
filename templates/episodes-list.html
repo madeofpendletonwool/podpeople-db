@@ -28,7 +28,7 @@
         
         {{if .Guests}}
         <div class="episode-guests">
-            <h4 class="guests-title">👥 Guests:</h4>
+            <h4 class="guests-title"><i class="ph ph-users"></i> Guests:</h4>
             <div class="guests-list">
                 {{range .Guests}}
                 <div class="guest-item">
@@ -51,11 +51,11 @@
         
         <div class="episode-actions">
             <a href="{{.AudioURL}}" target="_blank" class="episode-link">
-                🎧 Listen
+                <i class="ph ph-headphones"></i> Listen
             </a>
             {{if .Link}}
             <a href="{{.Link}}" target="_blank" class="episode-link">
-                🔗 Episode Page
+                <i class="ph ph-link"></i> Episode Page
             </a>
             {{end}}
             
@@ -63,7 +63,7 @@
             <button class="add-guest-btn" 
                     data-audio-url="{{.AudioURL}}" 
                     data-title="{{.Title}}">
-                👥 Add Guest
+                <i class="ph ph-user-plus"></i> Add Guest
             </button>
             {{end}}
             
@@ -102,15 +102,8 @@
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="guest-role">Role</label>
-                    <select id="guest-role" name="role" required>
-                        <option value="">Select Role</option>
-                        <option value="guest">Guest</option>
-                        <option value="host">Host</option>
-                        <option value="co-host">Co-Host</option>
-                    </select>
-                </div>
+                <!-- Hidden role field - automatically set to guest for episode-level submissions -->
+                <input type="hidden" id="guest-role" name="role" value="guest" />
                 
                 <div class="form-group full-width">
                     <label for="guest-description">Description</label>
@@ -262,25 +255,16 @@ function selectGuest(element) {
                 document.getElementById('guest-description').value = host.description || '';
                 document.getElementById('guest-link').value = host.link || '';
                 document.getElementById('guest-img').value = host.img || '';
-                // Set role based on existing data or default to guest
-                const roleSelect = document.getElementById('guest-role');
-                if (host.podcasts && host.podcasts.length > 0) {
-                    const role = host.podcasts[0].role.toLowerCase();
-                    roleSelect.value = role === 'host' ? 'host' : 'guest';
-                } else {
-                    roleSelect.value = 'guest'; // Default to guest if no role found
-                }
+                // Role is automatically set to guest, no need to update
             })
             .catch(error => {
                 console.error('Error fetching guest details:', error);
                 // If fetch fails, just keep the name that was set
-                // Set default role to guest
-                document.getElementById('guest-role').value = 'guest';
+                // Role is automatically set to guest, no need to update
             });
     } else {
-        console.log('No guest ID found, setting default role to guest');
-        // If no guestId, this is likely a new person, default to guest role
-        document.getElementById('guest-role').value = 'guest';
+        console.log('No guest ID found, role automatically set to guest');
+        // Role is automatically set to guest, no need to update
     }
 }
 
@@ -330,8 +314,7 @@ document.getElementById('guest-form').addEventListener('submit', function(e) {
             closeGuestModal();
             // Show success toast
             showToast(data.message || 'Guest submission received! It will be reviewed by administrators.');
-            // Reload the episodes to show updated guest count
-            location.reload();
+            // Note: Guest will appear after admin approval, no need to reload page
         } else {
             // Show error toast
             showToast(data.error || 'Failed to submit guest. Please try again.', 'error');
@@ -351,7 +334,7 @@ document.getElementById('guest-form').addEventListener('submit', function(e) {
 
 {{else}}
 <div class="empty-episodes">
-    <div class="empty-icon">🎧</div>
+    <div class="empty-icon"><i class="ph ph-headphones"></i></div>
     <h3>No Episodes Found</h3>
     <p>This podcast doesn't have any episodes available yet, or we couldn't load them from the feed.</p>
 </div>

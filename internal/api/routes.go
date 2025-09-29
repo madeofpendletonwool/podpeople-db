@@ -45,6 +45,7 @@ func (s *Server) registerRoutes() {
 			r.Put("/edit-host", s.EditHostHandler)
 			r.Delete("/delete-host/{id}", s.DeleteHostHandler)
 			r.Post("/import-database", s.ImportDatabaseHandler)
+			r.Get("/export-full-database", s.AdminExportFullDatabaseHandler)
 		})
 
 		// Auto-approve route (special case, uses approval key)
@@ -57,6 +58,7 @@ func (s *Server) registerRoutes() {
 		r.Get("/podcast/{id}/episodes", s.GetEpisodesHandler)
 		r.Get("/hosts/{id}", s.GetHostsAPI)
 		r.Get("/download-database", s.DownloadDatabaseHandler)
+		r.Get("/public-dataset", s.PublicDatasetExportHandler)
 		r.Get("/recent-hosts", s.GetRecentHostsHandler)
 		r.Get("/search-podcasts", s.SearchPodcastsHandler)
 		r.Get("/stats", s.GetStatsHandler)

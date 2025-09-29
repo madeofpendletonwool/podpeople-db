@@ -243,6 +243,18 @@ func (s *HostService) GetStats() (models.Stats, error) {
 		return stats, err
 	}
 
+	// Get episodes with guests (count distinct episodes that have episode_guests entries)
+	err = s.db.QueryRow("SELECT COUNT(DISTINCT episode_id) FROM episode_guests WHERE status = 'approved'").Scan(&stats.EpisodesWithGuests)
+	if err != nil {
+		return stats, err
+	}
+
+	// Get pending episode guests
+	err = s.db.QueryRow("SELECT COUNT(*) FROM episode_guests WHERE status = 'pending'").Scan(&stats.PendingEpisodeGuests)
+	if err != nil {
+		return stats, err
+	}
+
 	return stats, nil
 }
 
@@ -252,12 +264,11 @@ func (s *HostService) GetPopularPodcasts(limit int) ([]models.PodcastSummary, er
 		SELECT 
 			hp.podcast_id,
 			p.title,
-			COUNT(*) as host_count,
-			COALESCE(p.description, '') as description
+			COUNT(*) as host_count
 		FROM host_podcasts hp
 		JOIN podcasts p ON p.id = hp.podcast_id
 		WHERE hp.status = 'approved'
-		GROUP BY hp.podcast_id, p.title, p.description
+		GROUP BY hp.podcast_id, p.title
 		ORDER BY host_count DESC
 		LIMIT ?
 	`
@@ -271,7 +282,8 @@ func (s *HostService) GetPopularPodcasts(limit int) ([]models.PodcastSummary, er
 	var podcasts []models.PodcastSummary
 	for rows.Next() {
 		var podcast models.PodcastSummary
-		err := rows.Scan(&podcast.PodcastID, &podcast.Title, &podcast.HostCount, &podcast.Description)
+		err := rows.Scan(&podcast.PodcastID, &podcast.Title, &podcast.HostCount)
+		podcast.Description = "" // Set empty since we don't have this in the database
 		if err != nil {
 			return nil, err
 		}
@@ -296,4 +308,133 @@ func (s *HostService) CreateHost(name, description, link, img, podcastTitle, rol
 	}
 
 	return &host, nil
+}
+
+// ExportPublicDataset exports only approved public data for external use
+func (s *HostService) ExportPublicDataset() (*models.PublicDataset, error) {
+	dataset := &models.PublicDataset{
+		ExportDate: time.Now(),
+		Version:    "1.0",
+	}
+
+	// Export approved hosts
+	hostsQuery := `
+		SELECT DISTINCT h.id, h.name, COALESCE(h.description, '') as description, 
+		       COALESCE(h.link, '') as link, COALESCE(h.img, '') as img, h.created_at 
+		FROM hosts h 
+		JOIN host_podcasts hp ON h.id = hp.host_id 
+		WHERE hp.status = 'approved'
+		ORDER BY h.id
+	`
+	rows, err := s.db.Query(hostsQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var host models.Host
+		err := rows.Scan(&host.ID, &host.Name, &host.Description, &host.Link, &host.Img, &host.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		dataset.Hosts = append(dataset.Hosts, host)
+	}
+
+	// Export podcasts that have approved hosts
+	podcastsQuery := `
+		SELECT DISTINCT p.id, p.title, COALESCE(p.feed_url, '') as feed_url 
+		FROM podcasts p 
+		JOIN host_podcasts hp ON p.id = hp.podcast_id 
+		WHERE hp.status = 'approved'
+		ORDER BY p.id
+	`
+	rows, err = s.db.Query(podcastsQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var podcast models.Podcast
+		err := rows.Scan(&podcast.ID, &podcast.Title, &podcast.FeedURL)
+		if err != nil {
+			return nil, err
+		}
+		dataset.Podcasts = append(dataset.Podcasts, podcast)
+	}
+
+	// Export approved host-podcast relationships
+	hostPodcastsQuery := `
+		SELECT host_id, podcast_id, role, status, created_at 
+		FROM host_podcasts 
+		WHERE status = 'approved'
+		ORDER BY host_id, podcast_id
+	`
+	rows, err = s.db.Query(hostPodcastsQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var hp models.HostPodcast
+		err := rows.Scan(&hp.HostID, &hp.PodcastID, &hp.Role, &hp.Status, &hp.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		dataset.HostPodcasts = append(dataset.HostPodcasts, hp)
+	}
+
+	// Export approved episodes
+	episodesQuery := `
+		SELECT id, podcast_id, title, COALESCE(description, '') as description, audio_url, 
+		       pub_date, COALESCE(duration, 0) as duration, season_number, episode_number, 
+		       COALESCE(image_url, '') as image_url, COALESCE(link, '') as link, 
+		       COALESCE(guid, '') as guid, status, created_at 
+		FROM episodes 
+		WHERE status = 'approved'
+		ORDER BY id
+	`
+	rows, err = s.db.Query(episodesQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var episode models.Episode
+		err := rows.Scan(&episode.ID, &episode.PodcastID, &episode.Title, &episode.Description,
+			&episode.AudioURL, &episode.PubDate, &episode.Duration, &episode.SeasonNumber,
+			&episode.EpisodeNumber, &episode.ImageURL, &episode.Link, &episode.GUID,
+			&episode.Status, &episode.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		dataset.Episodes = append(dataset.Episodes, episode)
+	}
+
+	// Export approved episode guests
+	episodeGuestsQuery := `
+		SELECT id, episode_id, host_id, role, status, created_at 
+		FROM episode_guests 
+		WHERE status = 'approved'
+		ORDER BY id
+	`
+	rows, err = s.db.Query(episodeGuestsQuery)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var eg models.EpisodeGuest
+		err := rows.Scan(&eg.ID, &eg.EpisodeID, &eg.HostID, &eg.Role, &eg.Status, &eg.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		dataset.EpisodeGuests = append(dataset.EpisodeGuests, eg)
+	}
+
+	return dataset, nil
 }

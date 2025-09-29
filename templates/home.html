@@ -7,6 +7,7 @@
     <title>PodPeopleDB</title>
     <link rel="icon" type="image/x-icon" href="/static/podpeople.ico">
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
 </head>
@@ -43,23 +44,23 @@
         <div class="action-buttons-section">
             <div class="action-buttons-grid">
                 <a href="/docs/what-is-this-for" class="action-button docs-btn">
-                    <div class="button-icon">◉</div>
+                    <i class="ph ph-question button-icon"></i>
                     <div class="button-content">
                         <h3>Documentation</h3>
                         <p>Learn how PodPeopleDB works</p>
                     </div>
                 </a>
                 
-                <a href="/api/download-database" class="action-button download-btn">
-                    <div class="button-icon">↓</div>
+                <a href="/api/public-dataset" class="action-button download-btn">
+                    <i class="ph ph-download button-icon"></i>
                     <div class="button-content">
-                        <h3>Download Database</h3>
-                        <p>Get the complete dataset</p>
+                        <h3>Download Dataset</h3>
+                        <p>Get the public host/guest data</p>
                     </div>
                 </a>
                 
                 <a href="/admin/login" class="action-button admin-btn">
-                    <div class="button-icon">⚙</div>
+                    <i class="ph ph-gear button-icon"></i>
                     <div class="button-content">
                         <h3>Admin Portal</h3>
                         <p>Manage hosts and users</p>

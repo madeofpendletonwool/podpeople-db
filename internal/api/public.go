@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/madeofpendletonwool/podpeople-db/internal/db"
@@ -530,6 +531,29 @@ func (s *Server) DownloadDatabaseHandler(w http.ResponseWriter, r *http.Request)
 	_, err = io.Copy(w, dbFile)
 	if err != nil {
 		http.Error(w, "Error during file transfer", http.StatusInternalServerError)
+		return
+	}
+}
+
+// PublicDatasetExportHandler handles exporting the public dataset (no user data)
+func (s *Server) PublicDatasetExportHandler(w http.ResponseWriter, r *http.Request) {
+	// Export only public data (approved hosts, podcasts, episodes, etc.)
+	dataset, err := s.HostService.ExportPublicDataset()
+	if err != nil {
+		log.Printf("Error exporting public dataset: %v", err)
+		http.Error(w, "Failed to export dataset", http.StatusInternalServerError)
+		return
+	}
+
+	// Set headers for JSON download
+	filename := fmt.Sprintf("podpeople-dataset-%s.json", time.Now().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+
+	// Encode and send the JSON response
+	if err := json.NewEncoder(w).Encode(dataset); err != nil {
+		log.Printf("Error encoding dataset JSON: %v", err)
+		http.Error(w, "Failed to encode dataset", http.StatusInternalServerError)
 		return
 	}
 }

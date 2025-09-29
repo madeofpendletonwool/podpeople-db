@@ -24,17 +24,6 @@ type Episode struct {
 	Guests        []Host    `json:"guests,omitempty"`
 }
 
-// EpisodeGuest represents the relationship between an episode and a guest
-type EpisodeGuest struct {
-	ID                    int       `json:"id"`
-	EpisodeID             int       `json:"episode_id"`
-	HostID                int       `json:"host_id"`
-	Role                  string    `json:"role"` // guest, host, co-host
-	Status                string    `json:"status"`
-	ApprovalKey           string    `json:"approval_key,omitempty"`
-	ApprovalKeyExpiresAt  time.Time `json:"approval_key_expires_at,omitempty"`
-	CreatedAt             time.Time `json:"created_at"`
-}
 
 // FindByID finds an episode by its ID
 func (e *Episode) FindByID(db *sql.DB, id int) error {
