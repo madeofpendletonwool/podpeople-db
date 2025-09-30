@@ -5,154 +5,996 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - PodPeopleDB</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=1.1">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
 </head>
-<body>
-    <div class="container">
-        <a href="/" class="docs-home-link">
-            <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
-        </a>
-        <h1>Admin Dashboard</h1>
-        <h2>Pending Host Submissions</h2>
-        <div id="pending-hosts-list">
-            {{if .PendingHosts}}
-                {{range .PendingHosts}}
-                    <div class="host-item pending-host" id="host-{{.ID}}">
-                        <img src="{{if .Img}}/proxy-image?url={{.Img}}{{else}}/static/default-avatar.png{{end}}"
-                             alt="{{.Name}}"
-                             class="host-image"
-                             onerror="this.onerror=null; this.src='/static/default-avatar.png';">
-                        <div class="host-info">
-                            <h3>{{.Name}}</h3>
-                            {{range .Podcasts}}
-                                <p><strong>Role:</strong> {{.Role}} for {{.Title}} (ID: {{.PodcastID}})</p>
+<body class="admin-body">
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <nav class="admin-sidebar">
+            <div class="sidebar-header">
+                <img src="/static/podpeople.png" alt="PodPeopleDB" class="sidebar-logo">
+                <h2>Admin Portal</h2>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="#pending" class="nav-item active" data-section="pending">
+                    <i class="ph ph-user-check nav-icon"></i>
+                    <span>Pending Hosts</span>
+                    {{if .PendingHosts}}<span class="nav-badge">{{len .PendingHosts}}</span>{{end}}
+                </a>
+                <a href="#episode-guests" class="nav-item" data-section="episode-guests">
+                    <i class="ph ph-microphone nav-icon"></i>
+                    <span>Episode Guests</span>
+                    {{if .PendingEpisodeGuests}}<span class="nav-badge">{{len .PendingEpisodeGuests}}</span>{{end}}
+                </a>
+                <a href="#admins" class="nav-item" data-section="admins">
+                    <i class="ph ph-gear nav-icon"></i>
+                    <span>Admin Users</span>
+                </a>
+                <a href="#stats" class="nav-item" data-section="stats">
+                    <i class="ph ph-chart-bar nav-icon"></i>
+                    <span>Statistics</span>
+                </a>
+                <a href="#export" class="nav-item" data-section="export">
+                    <i class="ph ph-download nav-icon"></i>
+                    <span>Export</span>
+                </a>
+                <a href="#import" class="nav-item" data-section="import">
+                    <i class="ph ph-upload nav-icon"></i>
+                    <span>Import</span>
+                </a>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="/" class="nav-item">
+                    <i class="ph ph-arrow-left nav-icon"></i>
+                    <span>Back to Home</span>
+                </a>
+                <a href="/admin/logout" class="nav-item logout">
+                    <i class="ph ph-sign-out nav-icon"></i>
+                    <span>Sign Out</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="admin-header">
+                <div class="admin-header-left">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+                        <i class="ph ph-list"></i>
+                    </button>
+                    <h1 id="page-title">Pending Host Submissions</h1>
+                </div>
+                <div class="admin-header-right">
+                    <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+                        <i class="ph ph-sun theme-icon sun-icon"></i>
+                        <i class="ph ph-moon theme-icon moon-icon"></i>
+                    </button>
+                    <button onclick="refreshData()" class="refresh-btn">
+                        <i class="ph ph-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pending Hosts Section -->
+            <div class="content-section active" id="pending-section">
+                <div class="pending-hosts-container">
+                    {{if .PendingHosts}}
+                        <div class="hosts-grid">
+                            {{range .PendingHosts}}
+                                <div class="modern-host-card" id="host-{{.ID}}">
+                                    <div class="host-card-header">
+                                        <img src="{{if .Img}}/proxy-image?url={{.Img}}{{else}}/static/default-avatar.png{{end}}"
+                                             alt="{{.Name}}"
+                                             class="host-avatar"
+                                             onerror="this.onerror=null; this.src='/static/default-avatar.png';">
+                                        <div class="host-basic-info">
+                                            <h3>{{.Name}}</h3>
+                                            {{range .Podcasts}}
+                                                <p class="podcast-info">{{.Role}} • {{.Title}}</p>
+                                                <p class="podcast-id">Podcast ID: {{.PodcastID}}</p>
+                                            {{end}}
+                                        </div>
+                                    </div>
+
+                                    {{if .Description}}
+                                        <div class="host-description">
+                                            <p>{{.Description}}</p>
+                                        </div>
+                                    {{end}}
+
+                                    {{if .Link}}
+                                        <div class="host-link">
+                                            <a href="{{.Link}}" target="_blank" class="external-link">View Profile →</a>
+                                        </div>
+                                    {{end}}
+
+                                    <div class="card-actions">
+                                        <button onclick="approveHost({{.ID}})" class="approve-btn">✓ Approve</button>
+                                        <button onclick="rejectHost({{.ID}})" class="reject-btn">✗ Reject</button>
+                                    </div>
+                                </div>
                             {{end}}
-                            {{if .Description}}<p>{{.Description}}</p>{{end}}
-                            {{if .Link}}<a href="{{.Link}}" target="_blank">More Info</a>{{end}}
-                            <div class="admin-actions">
-                                <form action="/admin/approve/{{.ID}}" method="POST">
-                                    <button type="submit" class="approve-button">Approve</button>
-                                </form>
-                                <form action="/admin/reject/{{.ID}}" method="POST">
-                                    <button type="submit" class="reject-button">Reject</button>
-                                </form>
+                        </div>
+                    {{else}}
+                        <div class="empty-state">
+                            <div class="empty-icon">✨</div>
+                            <h3>All caught up!</h3>
+                            <p>No pending host submissions at the moment.</p>
+                        </div>
+                    {{end}}
+                </div>
+            </div>
+
+            <!-- Episode Guests Section -->
+            <div class="content-section" id="episode-guests-section">
+                <div class="episode-guests-container">
+                    {{if .PendingEpisodeGuests}}
+                        <div class="hosts-grid">
+                            {{range .PendingEpisodeGuests}}
+                                <div class="episode-guest-card" id="episode-guest-{{.ID}}">
+                                    <div class="episode-guest-header">
+                                        <div class="guest-info">
+                                            <h3>{{.HostName}}</h3>
+                                            <p class="guest-role">{{.Role}}</p>
+                                        </div>
+                                        {{if .HostImg}}
+                                        <img src="/proxy-image?url={{.HostImg}}"
+                                             alt="{{.HostName}}"
+                                             class="guest-avatar"
+                                             onerror="this.onerror=null; this.src='/static/default-avatar.png';">
+                                        {{else}}
+                                        <div class="guest-avatar-placeholder">{{slice .HostName 0 2}}</div>
+                                        {{end}}
+                                    </div>
+
+                                    <div class="episode-info">
+                                        <h4>Episode: {{.EpisodeTitle}}</h4>
+                                        <p class="podcast-name">Podcast: {{.PodcastTitle}}</p>
+                                        {{if .EpisodeDescription}}
+                                        <p class="episode-description">{{Truncate .EpisodeDescription 150}}</p>
+                                        {{end}}
+                                    </div>
+
+                                    {{if .HostDescription}}
+                                    <div class="host-description">
+                                        <p><strong>Guest Info:</strong> {{.HostDescription}}</p>
+                                    </div>
+                                    {{end}}
+
+                                    {{if .HostLink}}
+                                    <div class="host-link">
+                                        <a href="{{.HostLink}}" target="_blank" class="external-link">View Profile →</a>
+                                    </div>
+                                    {{end}}
+
+                                    <div class="submission-info">
+                                        <p class="submission-date">Submitted: {{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</p>
+                                    </div>
+
+                                    <div class="card-actions">
+                                        <button onclick="approveEpisodeGuest({{.ID}})" class="approve-btn">✓ Approve Guest</button>
+                                        <button onclick="rejectEpisodeGuest({{.ID}})" class="reject-btn">✗ Reject Guest</button>
+                                    </div>
+                                </div>
+                            {{end}}
+                        </div>
+                    {{else}}
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="ph ph-microphone"></i></div>
+                            <h3>No pending episode guests</h3>
+                            <p>All episode guest submissions have been processed.</p>
+                        </div>
+                    {{end}}
+                </div>
+            </div>
+
+            <!-- Admin Users Section -->
+            <div class="content-section" id="admins-section">
+                <div class="section-header">
+                    <h2>Administrator Accounts</h2>
+                    <button onclick="openAddAdminModal()" class="primary-button">+ Add Admin</button>
+                </div>
+
+                <div class="admin-users-grid">
+                    {{range .Admins}}
+                        <div class="admin-user-card" id="admin-{{.ID}}">
+                            <div class="admin-card-header">
+                                <div class="admin-avatar">{{slice .Username 0 2}}</div>
+                                <div class="admin-info">
+                                    <h3>{{.Username}}</h3>
+                                    <p class="admin-role">Administrator</p>
+                                </div>
+                            </div>
+                            <div class="admin-card-actions">
+                                <button onclick="openEditAdminModal({{.ID}}, '{{.Username}}')"
+                                        class="edit-btn">Edit</button>
+                                <button onclick="deleteAdmin({{.ID}})"
+                                        class="delete-btn">Delete</button>
+                            </div>
+                        </div>
+                    {{end}}
+                </div>
+            </div>
+
+            <!-- Statistics Section -->
+            <div class="content-section" id="stats-section">
+                <h2>Database Statistics</h2>
+                <div class="stats-overview" hx-get="/api/stats" hx-trigger="revealed once" hx-swap="innerHTML">
+                    <div class="loading-stats">Loading statistics...</div>
+                </div>
+            </div>
+
+            <!-- Export Section -->
+            <div class="content-section" id="export-section">
+                <div class="section-header">
+                    <h2>Export Database</h2>
+                    <p>Download database backups in different formats for different purposes.</p>
+                </div>
+
+                <div class="export-container">
+                    <div class="export-options">
+                        <div class="export-option">
+                            <div class="export-card">
+                                <div class="export-header">
+                                    <h3><i class="ph ph-download"></i> Public Dataset</h3>
+                                    <span class="export-badge public">Public</span>
+                                </div>
+                                <p>Download approved hosts, podcasts, and episodes data in JSON format. No user accounts or pending submissions included.</p>
+                                <div class="export-details">
+                                    <small>Format: JSON | Contains: Public data only</small>
+                                </div>
+                                <a href="/api/public-dataset" class="export-button primary-button">
+                                    <i class="ph ph-download"></i> Download Public Dataset
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="export-option">
+                            <div class="export-card">
+                                <div class="export-header">
+                                    <h3><i class="ph ph-database"></i> Full Database</h3>
+                                    <span class="export-badge admin">Admin Only</span>
+                                </div>
+                                <p>Complete SQLite database backup including all users, pending submissions, and system data. For admin use only.</p>
+                                <div class="export-details">
+                                    <small>Format: SQLite | Contains: Everything (users, sessions, etc.)</small>
+                                </div>
+                                <a href="/admin/export-full-database" class="export-button secondary-button">
+                                    <i class="ph ph-database"></i> Download Full Backup
+                                </a>
                             </div>
                         </div>
                     </div>
-                {{end}}
-            {{else}}
-                <p class="no-submissions">No pending submissions.</p>
-            {{end}}
-        </div>
+                </div>
+            </div>
 
+            <!-- Import Section -->
+            <div class="content-section" id="import-section">
+                <div class="section-header">
+                    <h2>Import Data</h2>
+                    <p>Add new data to your database or perform complete database restoration.</p>
+                </div>
 
-        <!-- Admin Users Section -->
-        <div class="admin-section">
-            <h2>Admin Users</h2>
-            <button onclick="openAddAdminModal()" class="add-admin-button">Add New Admin</button>
-            <div class="admin-users-list">
-                {{range .Admins}}
-                    <div class="admin-user-item" id="admin-{{.ID}}">
-                        <span class="admin-username">{{.Username}}</span>
-                        <div class="admin-actions">
-                            <button onclick="openEditAdminModal({{.ID}}, '{{.Username}}')" 
-                                    class="edit-button">Edit</button>
-                            <button hx-delete="/admin/delete-admin/{{.ID}}"
-                                    hx-confirm="Are you sure you want to delete this admin?"
-                                    hx-target="#admin-{{.ID}}"
-                                    class="delete-button">Delete</button>
+                <div class="import-container">
+                    <div class="import-options">
+                        <div class="import-option">
+                            <div class="import-card">
+                                <div class="import-header">
+                                    <h3><i class="ph ph-plus-circle"></i> Import Dataset</h3>
+                                    <span class="import-badge safe">Safe</span>
+                                </div>
+                                <p>Import hosts, podcasts, and episodes from a JSON dataset. Your existing users and admin accounts are preserved. Conflicts will be flagged for review.</p>
+                                <div class="import-details">
+                                    <small>Accepts: JSON dataset files | Preserves: Users, admins, sessions</small>
+                                </div>
+                                <button onclick="openDatasetImportModal()" class="import-button primary-button">
+                                    <i class="ph ph-upload"></i> Import Dataset
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="import-option">
+                            <div class="import-card">
+                                <div class="import-header">
+                                    <h3><i class="ph ph-warning"></i> Reset & Import Full Database</h3>
+                                    <span class="import-badge danger">Destructive</span>
+                                </div>
+                                <p>Replace the entire database with a SQLite backup. This completely overwrites all existing data including users and admin accounts.</p>
+                                <div class="import-details">
+                                    <small>Accepts: SQLite files | Replaces: Everything</small>
+                                </div>
+                                <button onclick="openFullImportModal()" class="import-button danger-button">
+                                    <i class="ph ph-database"></i> Reset & Import
+                                </button>
+                            </div>
                         </div>
                     </div>
-                {{end}}
+                </div>
             </div>
-        </div>
+        </main>
+    </div>
 
 
-        <div id="admin-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close" onclick="closeAdminModal()">&times;</span>
+    <!-- Modern Modal -->
+    <div id="admin-modal" class="modern-modal" style="display: none;">
+        <div class="modal-backdrop" onclick="closeAdminModal()"></div>
+        <div class="modal-container">
+            <div class="modal-header">
                 <h2 id="modal-title">Add New Admin</h2>
-                <form id="admin-form"
-                    hx-post="/admin/add-admin"
-                    hx-target=".admin-users-list"
-                    hx-swap="innerHTML"
-                    hx-trigger="submit"
-                    hx-indicator="#loading"
-                    onsubmit="return false;">  <!-- Prevent default form submission -->
-                <input type="hidden" name="adminId" id="admin-id">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                <div class="modal-buttons">
-                    <button type="button" onclick="closeAdminModal()">Cancel</button>
-                    <button type="submit">Save</button>
-                </div>
-                <div id="loading" class="htmx-indicator">Adding...</div>
-            </form>
+                <button onclick="closeAdminModal()" class="modal-close">×</button>
             </div>
-        </div>
 
+            <form id="admin-form" class="modal-form">
+                <input type="hidden" name="adminId" id="admin-id">
+
+                <div class="form-field">
+                    <label for="modal-username">Username</label>
+                    <input type="text" id="modal-username" name="username" required
+                           placeholder="Enter username">
+                </div>
+
+                <div class="form-field">
+                    <label for="modal-password">Password</label>
+                    <input type="password" id="modal-password" name="password" required
+                           placeholder="Enter password">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="closeAdminModal()" class="secondary-button">Cancel</button>
+                    <button type="submit" class="primary-button" id="modal-submit-btn">
+                        <span class="btn-text">Save Admin</span>
+                        <div class="btn-spinner" style="display: none;"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dataset Import Modal -->
+    <div id="dataset-import-modal" class="modern-modal" style="display: none;">
+        <div class="modal-backdrop" onclick="closeDatasetImportModal()"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Import Dataset</h2>
+                <button onclick="closeDatasetImportModal()" class="modal-close">×</button>
+            </div>
+
+            <form id="dataset-import-form" class="modal-form" enctype="multipart/form-data">
+                <div class="form-field">
+                    <label for="dataset-file">Select JSON Dataset File</label>
+                    <input type="file" id="dataset-file" name="dataset" accept=".json" required>
+                    <small>Accepted format: JSON dataset files exported from PodPeopleDB</small>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-icon"><i class="ph ph-info"></i></div>
+                    <div class="info-content">
+                        <h4>Safe Import</h4>
+                        <p>This will preserve your existing users and admin accounts. Any data conflicts will be flagged for review.</p>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="closeDatasetImportModal()" class="secondary-button">Cancel</button>
+                    <button type="submit" class="primary-button" id="dataset-import-btn">
+                        <span class="btn-text">Import Dataset</span>
+                        <div class="btn-spinner" style="display: none;"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Full Database Import Modal -->
+    <div id="full-import-modal" class="modern-modal" style="display: none;">
+        <div class="modal-backdrop" onclick="closeFullImportModal()"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Reset & Import Full Database</h2>
+                <button onclick="closeFullImportModal()" class="modal-close">×</button>
+            </div>
+
+            <form id="full-import-form" class="modal-form" enctype="multipart/form-data">
+                <div class="warning-box">
+                    <div class="warning-icon"><i class="ph ph-warning"></i></div>
+                    <div class="warning-content">
+                        <h4>⚠️ Destructive Action</h4>
+                        <p>This will completely replace ALL data including users, admin accounts, and sessions. You will be logged out and need to sign in again.</p>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="full-database-file">Select SQLite Database File</label>
+                    <input type="file" id="full-database-file" name="database" accept=".sqlite,.sqlite3,.db" required>
+                    <small>Accepted formats: .sqlite, .sqlite3, .db</small>
+                </div>
+
+                <div class="form-field">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="confirm-full-import" name="confirm" required>
+                        <label for="confirm-full-import">I understand this will replace ALL existing data</label>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="closeFullImportModal()" class="secondary-button">Cancel</button>
+                    <button type="submit" class="danger-button" id="full-import-btn" disabled>
+                        <span class="btn-text">Reset & Import</span>
+                        <div class="btn-spinner" style="display: none;"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     </div>
 
     <script>
+        // Modern admin dashboard functionality
+        let currentMode = 'add';
+
+        // Theme management
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('admin-theme');
+            let theme;
+
+            if (savedTheme) {
+                theme = savedTheme;
+            } else {
+                // Use system preference
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('admin-theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const sunIcon = document.querySelector('.sun-icon');
+            const moonIcon = document.querySelector('.moon-icon');
+
+            if (theme === 'dark') {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        // Toggle sidebar for mobile
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.admin-sidebar');
+            const layout = document.querySelector('.admin-layout');
+            const isOpen = sidebar.classList.contains('sidebar-open');
+
+            if (isOpen) {
+                sidebar.classList.remove('sidebar-open');
+                layout.classList.remove('sidebar-open');
+            } else {
+                sidebar.classList.add('sidebar-open');
+                layout.classList.add('sidebar-open');
+            }
+        }
+
+        // Close sidebar when clicking outside on mobile
+        function handleOutsideClick(event) {
+            if (window.innerWidth <= 768) {
+                const sidebar = document.querySelector('.admin-sidebar');
+                const menuBtn = document.querySelector('.mobile-menu-btn');
+
+                if (sidebar.classList.contains('sidebar-open') &&
+                    !sidebar.contains(event.target) &&
+                    !menuBtn.contains(event.target)) {
+                    toggleSidebar();
+                }
+            }
+        }
+
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize theme
+            initializeTheme();
+
+            // Add outside click listener
+            document.addEventListener('click', handleOutsideClick);
+
+            // Navigation handling
+            document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.dataset.section;
+                    switchSection(section);
+
+                    // Update active nav item
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Close sidebar on mobile after selection
+                    if (window.innerWidth <= 768) {
+                        toggleSidebar();
+                    }
+                });
+            });
+
+            // Enable/disable full import button based on confirmation checkbox
+            const confirmCheckbox = document.getElementById('confirm-full-import');
+            const fullImportBtn = document.getElementById('full-import-btn');
+            if (confirmCheckbox && fullImportBtn) {
+                confirmCheckbox.addEventListener('change', function() {
+                    fullImportBtn.disabled = !this.checked;
+                });
+            }
+        });
+
+        function switchSection(section) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+
+            // Show target section
+            const targetSection = document.getElementById(section + '-section');
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+
+            // Update page title
+            const titles = {
+                'pending': 'Pending Host Submissions',
+                'episode-guests': 'Pending Episode Guests',
+                'admins': 'Administrator Accounts',
+                'stats': 'Database Statistics',
+                'export': 'Export Database',
+                'import': 'Import Data'
+            };
+            document.getElementById('page-title').textContent = titles[section] || 'Dashboard';
+        }
+
+        // Host approval/rejection
+        async function approveHost(hostId) {
+            try {
+                const response = await fetch(`/admin/approve/${hostId}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const hostCard = document.getElementById(`host-${hostId}`);
+                    hostCard.style.animation = 'slideOut 0.3s ease-in-out forwards';
+                    setTimeout(() => hostCard.remove(), 300);
+                    showToast('Host approved successfully', 'success');
+                } else {
+                    showToast('Failed to approve host', 'error');
+                }
+            } catch (error) {
+                showToast('Error approving host', 'error');
+            }
+        }
+
+        async function rejectHost(hostId) {
+            if (!confirm('Reject this host submission? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/admin/reject/${hostId}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const hostCard = document.getElementById(`host-${hostId}`);
+                    hostCard.style.animation = 'slideOut 0.3s ease-in-out forwards';
+                    setTimeout(() => hostCard.remove(), 300);
+                    showToast('Host rejected successfully', 'success');
+                } else {
+                    showToast('Failed to reject host', 'error');
+                }
+            } catch (error) {
+                showToast('Error rejecting host', 'error');
+            }
+        }
+
+        // Episode guest approval/rejection
+        async function approveEpisodeGuest(guestId) {
+
+            try {
+                const response = await fetch(`/admin/approve-episode-guest/${guestId}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const guestCard = document.getElementById(`episode-guest-${guestId}`);
+                    guestCard.style.animation = 'slideOut 0.3s ease-in-out forwards';
+                    setTimeout(() => guestCard.remove(), 300);
+                    showToast('Episode guest approved successfully', 'success');
+                } else {
+                    showToast('Failed to approve episode guest', 'error');
+                }
+            } catch (error) {
+                showToast('Error approving episode guest', 'error');
+            }
+        }
+
+        async function rejectEpisodeGuest(guestId) {
+            if (!confirm('Reject this episode guest submission? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/admin/reject-episode-guest/${guestId}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const guestCard = document.getElementById(`episode-guest-${guestId}`);
+                    guestCard.style.animation = 'slideOut 0.3s ease-in-out forwards';
+                    setTimeout(() => guestCard.remove(), 300);
+                    showToast('Episode guest rejected successfully', 'success');
+                } else {
+                    showToast('Failed to reject episode guest', 'error');
+                }
+            } catch (error) {
+                showToast('Error rejecting episode guest', 'error');
+            }
+        }
+
+        // Admin modal functions
         function openAddAdminModal() {
-            const modal = document.getElementById('admin-modal');
-            const form = document.getElementById('admin-form');
-            const title = document.getElementById('modal-title');
-            
-            title.textContent = 'Add New Admin';
-            form.setAttribute('hx-post', '/admin/add-admin');
-            form.reset();
-            modal.style.display = 'block';
+            currentMode = 'add';
+            document.getElementById('modal-title').textContent = 'Add New Admin';
+            document.getElementById('admin-form').reset();
+            document.getElementById('admin-id').value = '';
+            document.getElementById('modal-password').required = true;
+            document.getElementById('modal-password').placeholder = 'Enter password';
+            document.querySelector('.btn-text').textContent = 'Add Admin';
+            showModal();
         }
 
         function openEditAdminModal(id, username) {
-            const modal = document.getElementById('admin-modal');
-            const form = document.getElementById('admin-form');
-            const title = document.getElementById('modal-title');
-            
-            title.textContent = 'Edit Admin';
-            form.setAttribute('hx-put', '/admin/edit-admin');
+            currentMode = 'edit';
+            document.getElementById('modal-title').textContent = 'Edit Admin';
             document.getElementById('admin-id').value = id;
-            document.getElementById('username').value = username;
-            document.getElementById('password').placeholder = 'Leave blank to keep current password';
-            document.getElementById('password').required = false;
-            modal.style.display = 'block';
+            document.getElementById('modal-username').value = username;
+            document.getElementById('modal-password').value = '';
+            document.getElementById('modal-password').required = false;
+            document.getElementById('modal-password').placeholder = 'Leave blank to keep current password';
+            document.querySelector('.btn-text').textContent = 'Update Admin';
+            showModal();
+        }
+
+        function showModal() {
+            const modal = document.getElementById('admin-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
         }
 
         function closeAdminModal() {
             const modal = document.getElementById('admin-modal');
-            modal.style.display = 'none';
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
         }
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('admin-modal');
-            if (event.target == modal) {
-                closeAdminModal();
+        // Admin form submission
+        document.getElementById('admin-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('modal-submit-btn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnSpinner = submitBtn.querySelector('.btn-spinner');
+
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline-block';
+
+            const formData = new FormData(this);
+            const endpoint = currentMode === 'add' ? '/admin/add-admin' : '/admin/edit-admin';
+            const method = currentMode === 'add' ? 'POST' : 'PUT';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: method,
+                    body: formData
+                });
+
+                if (response.ok) {
+                    closeAdminModal();
+                    showToast(`Admin ${currentMode === 'add' ? 'added' : 'updated'} successfully`, 'success');
+                    // Refresh admin list
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(`Failed to ${currentMode} admin`, 'error');
+                }
+            } catch (error) {
+                showToast('Network error', 'error');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
+            }
+        });
+
+        async function deleteAdmin(adminId) {
+            if (!confirm('Delete this admin account? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/admin/delete-admin/${adminId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    const adminCard = document.getElementById(`admin-${adminId}`);
+                    adminCard.style.animation = 'slideOut 0.3s ease-in-out forwards';
+                    setTimeout(() => adminCard.remove(), 300);
+                    showToast('Admin deleted successfully', 'success');
+                } else {
+                    showToast('Failed to delete admin', 'error');
+                }
+            } catch (error) {
+                showToast('Error deleting admin', 'error');
             }
         }
-        // Add these after your existing event listeners
-        document.body.addEventListener('htmx:beforeRequest', function(evt) {
-            console.log('HTMX request starting:', evt.detail);
+
+        function refreshData() {
+            location.reload();
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Import functionality
+        document.getElementById('confirm-import').addEventListener('change', function() {
+            document.getElementById('import-button').disabled = !this.checked;
         });
 
-        document.body.addEventListener('htmx:afterRequest', function(evt) {
-            console.log('HTMX request finished:', evt.detail);
-            if (evt.detail.successful) {
-                closeAdminModal();
+        document.getElementById('import-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('database-file');
+            const confirmInput = document.getElementById('confirm-import');
+            const importButton = document.getElementById('import-button');
+            const btnText = importButton.querySelector('.btn-text');
+            const btnSpinner = importButton.querySelector('.btn-spinner');
+            const progressDiv = document.getElementById('import-progress');
+            const resultDiv = document.getElementById('import-result');
+
+            if (!fileInput.files[0]) {
+                showToast('Please select a database file', 'error');
+                return;
+            }
+
+            if (!confirmInput.checked) {
+                showToast('Please confirm you understand the risks', 'error');
+                return;
+            }
+
+            // Show loading state
+            importButton.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline-block';
+            progressDiv.style.display = 'block';
+            resultDiv.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('database', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/admin/import-database', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Hide progress
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success-result">
+                            <div class="result-icon">✅</div>
+                            <h3>Import Successful</h3>
+                            <p>${result.message}</p>
+                            <p>Records imported: ${result.recordsImported || 'N/A'}</p>
+                            <button onclick="location.reload()" class="primary-button">Refresh Dashboard</button>
+                        </div>
+                    `;
+                    showToast('Database imported successfully', 'success');
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error-result">
+                            <div class="result-icon">❌</div>
+                            <h3>Import Failed</h3>
+                            <p>${result.error}</p>
+                        </div>
+                    `;
+                    showToast('Import failed: ' + result.error, 'error');
+                }
+            } catch (error) {
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <div class="error-result">
+                        <div class="result-icon">❌</div>
+                        <h3>Network Error</h3>
+                        <p>Failed to connect to server: ${error.message}</p>
+                    </div>
+                `;
+                showToast('Network error during import', 'error');
+            } finally {
+                // Reset button state
+                importButton.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
             }
         });
 
-        document.body.addEventListener('htmx:responseError', function(evt) {
-            console.log('HTMX response error:', evt.detail);
+        // Import modal functions
+        function openDatasetImportModal() {
+            const modal = document.getElementById('dataset-import-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
+            document.getElementById('dataset-file').focus();
+        }
+
+        function closeDatasetImportModal() {
+            const modal = document.getElementById('dataset-import-modal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+            document.getElementById('dataset-import-form').reset();
+        }
+
+        function openFullImportModal() {
+            const modal = document.getElementById('full-import-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
+            document.getElementById('full-database-file').focus();
+        }
+
+        function closeFullImportModal() {
+            const modal = document.getElementById('full-import-modal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+            document.getElementById('full-import-form').reset();
+            document.getElementById('full-import-btn').disabled = true;
+        }
+
+
+        // Dataset import form submission
+        document.getElementById('dataset-import-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('dataset-import-btn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnSpinner = submitBtn.querySelector('.btn-spinner');
+            const fileInput = document.getElementById('dataset-file');
+
+            if (!fileInput.files[0]) {
+                showToast('Please select a dataset file', 'error');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline-block';
+
+            const formData = new FormData();
+            formData.append('dataset', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/admin/import-dataset', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    closeDatasetImportModal();
+                    showToast(result.message || 'Dataset imported successfully', 'success');
+                    // Refresh page after a delay to show updated data
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showToast(result.error || 'Failed to import dataset', 'error');
+                }
+            } catch (error) {
+                console.error('Error importing dataset:', error);
+                showToast('Network error during dataset import', 'error');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
+            }
+        });
+
+        // Full database import form submission (uses existing import-database endpoint)
+        document.getElementById('full-import-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('full-import-btn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnSpinner = submitBtn.querySelector('.btn-spinner');
+            const fileInput = document.getElementById('full-database-file');
+            const confirmCheckbox = document.getElementById('confirm-full-import');
+
+            if (!fileInput.files[0]) {
+                showToast('Please select a database file', 'error');
+                return;
+            }
+
+            if (!confirmCheckbox.checked) {
+                showToast('Please confirm you understand the risks', 'error');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline-block';
+
+            const formData = new FormData();
+            formData.append('database', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/admin/import-database', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('Database imported successfully. You will be redirected to login.', 'success');
+                    // Redirect to login after successful import since user session will be invalidated
+                    setTimeout(() => {
+                        window.location.href = '/admin/login';
+                    }, 2000);
+                } else {
+                    showToast(result.error || 'Failed to import database', 'error');
+                }
+            } catch (error) {
+                console.error('Error importing database:', error);
+                showToast('Network error during database import', 'error');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAdminModal();
+                closeDatasetImportModal();
+                closeFullImportModal();
+            }
         });
     </script>
 </body>

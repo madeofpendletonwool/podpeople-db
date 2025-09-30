@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results - PodPeopleDB</title>
+    <link rel="icon" type="image/x-icon" href="/static/podpeople.ico">
+    <link rel="stylesheet" href="/static/styles.css?v=1.1">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with logo and search -->
+        <div class="search-page-header">
+            <a href="/" class="logo-link">
+                <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="search-page-logo">
+                <span class="site-name">PodPeopleDB</span>
+            </a>
+            
+            <form action="/search" method="GET" class="search-page-form">
+                <input type="text" name="q" value="{{.Query}}" placeholder="Search for podcasts..." autocomplete="off" required>
+                <button type="submit">Search</button>
+            </form>
+        </div>
+
+        <!-- Search Results -->
+        <div class="search-page-content">
+            {{if .Message}}
+                <div class="search-page-message">
+                    <h2>{{.Message}}</h2>
+                    {{if eq .Message "Please enter at least 2 characters to search"}}
+                        <p>Try searching for podcast names like "Code" or "This American Life"</p>
+                    {{end}}
+                </div>
+            {{else if .Results}}
+                <div class="search-results-header">
+                    <h1>Search Results for "{{.Query}}"</h1>
+                    <p class="results-count">Found {{len .Results}} podcast{{if ne (len .Results) 1}}s{{end}}</p>
+                </div>
+                
+                <div class="search-results-grid">
+                    {{range .Results}}
+                        <div class="search-result-card" onclick="window.location.href='/podcast/{{.ID}}'">
+                            <div class="result-image">
+                                <img src="{{if .Image}}/proxy-image?url={{.Image}}{{else}}/static/podpeople.png{{end}}" 
+                                     alt="{{.Title}}" 
+                                     onerror="this.onerror=null; this.src='/static/podpeople.png';">
+                            </div>
+                            <div class="result-content">
+                                <h3 class="result-title">{{.Title}}</h3>
+                                {{if .Author}}
+                                    <p class="result-author">by {{.Author}}</p>
+                                {{end}}
+                                {{if .Description}}
+                                    <p class="result-description">{{.Description}}</p>
+                                {{end}}
+                                <div class="result-meta">
+                                    <span class="result-id">ID: {{.ID}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    {{end}}
+                </div>
+            {{else}}
+                <div class="search-page-message">
+                    <h2>No results found</h2>
+                    <p>We couldn't find any podcasts matching "{{.Query}}". Try a different search term or check your spelling.</p>
+                    <div class="search-suggestions">
+                        <h3>Search suggestions:</h3>
+                        <ul>
+                            <li>Try broader terms like "tech" or "comedy"</li>
+                            <li>Check for typos in your search</li>
+                            <li>Use the host's full name if searching for a person</li>
+                        </ul>
+                    </div>
+                </div>
+            {{end}}
+        </div>
+
+        <!-- Back to home link -->
+        <div class="back-to-home">
+            <a href="/"><i class="ph ph-arrow-left"></i> Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

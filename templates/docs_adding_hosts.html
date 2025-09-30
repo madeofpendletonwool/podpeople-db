@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adding Hosts - PodPeopleDB Documentation</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=1.1">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -21,15 +22,37 @@
             <h2>Contributing to PodPeopleDB</h2>
 
             <h3>Automatic Import via podcast:person Tags</h3>
-            <p>PodPeopleDB automatically imports host and guest information from podcast feeds that use the podcast:person namespace. If your podcast uses these tags, your host information will be automatically imported when someone looks up your podcast.</p>
+            <p>PodPeopleDB automatically imports host and guest information from podcast feeds that use the podcast:person namespace. This works at both the podcast level and episode level.</p>
 
+            <h4>Podcast-Level Person Tags</h4>
+            <p>Add person tags to your podcast's main feed for hosts who appear regularly:</p>
             <div class="code-example">
-                <pre><code>&lt;podcast:person role="host" img="http://example.com/host.jpg"&gt;Jane Smith&lt;/podcast:person&gt;</code></pre>
+                <pre><code>&lt;channel&gt;
+    &lt;title&gt;My Awesome Podcast&lt;/title&gt;
+    &lt;podcast:person role="host" img="http://example.com/jane.jpg" href="http://jane.example.com"&gt;Jane Smith&lt;/podcast:person&gt;
+    &lt;podcast:person role="host" img="http://example.com/john.jpg"&gt;John Doe&lt;/podcast:person&gt;
+    ...
+&lt;/channel&gt;</code></pre>
             </div>
 
-            <h3>Manual Submission</h3>
-            <p>For podcasts that don't use the podcast:person tag, you can manually submit host information:</p>
+            <h4>Episode-Level Person Tags</h4>
+            <p>Add person tags to individual episodes for guests or episode-specific hosts:</p>
+            <div class="code-example">
+                <pre><code>&lt;item&gt;
+    &lt;title&gt;Episode 42: Special Guest Interview&lt;/title&gt;
+    &lt;podcast:person role="guest" img="http://example.com/guest.jpg" href="http://guest.example.com"&gt;Dr. Expert&lt;/podcast:person&gt;
+    &lt;podcast:person role="host" group="Main Show"&gt;Jane Smith&lt;/podcast:person&gt;
+    ...
+&lt;/item&gt;</code></pre>
+            </div>
             
+            <p><strong>Important:</strong> If your podcast uses podcast:person tags, manual submissions will be disabled to prevent conflicts with your authoritative feed data.</p>
+
+            <h3>Manual Submission</h3>
+            <p>For podcasts that don't use the podcast:person tag, you can manually submit host and guest information at two levels:</p>
+            
+            <h4>Podcast-Level Hosts</h4>
+            <p>Submit hosts who appear regularly across multiple episodes:</p>
             <ol>
                 <li>Enter your Podcast Index Feed ID on the homepage</li>
                 <li>Click on "Add New Host/Guest" on the podcast page</li>
@@ -44,12 +67,64 @@
                 </li>
                 <li>Submit for approval</li>
             </ol>
+            
+            <h4>Episode-Level Guests</h4>
+            <p>Submit guests who appeared on specific episodes:</p>
+            <ol>
+                <li>Navigate to the specific episode page via:
+                    <ul>
+                        <li>Clicking "Episode Details" on any episode from the podcast page</li>
+                        <li>Direct link: <code>podpeople.db/episode/{podcastId}/{audioUrl}</code></li>
+                    </ul>
+                </li>
+                <li>Click on "Add Guest to This Episode" (only available for podcasts without Podcast 2.0 person tags)</li>
+                <li>Fill in the guest details:
+                    <ul>
+                        <li>Guest Name (required) - with search suggestions from existing database</li>
+                        <li>Role (automatically set to "Guest" for episode submissions)</li>
+                        <li>Description specific to their appearance on this episode</li>
+                        <li>Link to more information</li>
+                        <li>Profile image URL (optional)</li>
+                    </ul>
+                </li>
+                <li>Submit for approval</li>
+            </ol>
+
+            <h3>Deep Linking and App Integration</h3>
+            <p>Podcast apps and developers can enhance their user experience by integrating with PodPeopleDB episode pages:</p>
+            
+            <h4>Direct Episode Links</h4>
+            <p>Generate direct links to episode pages for guest submissions:</p>
+            <div class="code-example">
+                <pre><code>// URL Format
+https://podpeople.db/episode/{podcastId}/{encodedAudioUrl}
+
+// Example
+https://podpeople.db/episode/123456/https%3A%2F%2Fexample.com%2Fepisode.mp3</code></pre>
+            </div>
+            
+            <h4>App Integration Ideas</h4>
+            <ul>
+                <li><strong>Guest Discovery:</strong> Show episode guests from PodPeopleDB in your episode view</li>
+                <li><strong>Contribution Buttons:</strong> Add "Submit Guest Info" buttons that link to episode pages</li>
+                <li><strong>Host Following:</strong> Let users follow hosts across different podcasts</li>
+                <li><strong>Guest Networks:</strong> Show connections between guests and podcasts</li>
+                <li><strong>Community Features:</strong> Enable users to contribute missing guest information</li>
+            </ul>
+            
+            <h4>When to Show Submission Options</h4>
+            <p>Check the API response for each episode:</p>
+            <ul>
+                <li><code>episode.can_add_guests: true</code> - Show guest submission options</li>
+                <li><code>episode.can_add_guests: false</code> - Podcast uses Podcast 2.0 tags, no manual submissions needed</li>
+                <li><code>episode.guest_count > 0</code> - Episode already has guest data</li>
+            </ul>
 
             <h3>Approval Process</h3>
             <p>To maintain data quality, all manual submissions are reviewed before being added to the database. This typically takes an hour or two at most. If you'd prefer to add your own hosts without approval you can always <a href="/docs/self-host">self-host</a> PodPeopleDB if you'd prefer.</p>
 
             <div class="docs-nav">
-                <a href="/docs/what-is-this-for" class="docs-nav-link prev">← Previous: What is PodPeopleDB</a>
+                <a href="/docs/what-is-this-for" class="docs-nav-link prev"><i class="ph ph-arrow-left"></i> Previous: What is PodPeopleDB</a>
                 <a href="/docs/integration" class="docs-nav-link">Next: Integration Guide →</a>
             </div>
         </div>

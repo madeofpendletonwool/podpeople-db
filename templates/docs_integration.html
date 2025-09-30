@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Integration Guide - PodPeopleDB Documentation</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=1.1">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -21,52 +22,221 @@
             <h2>API Documentation</h2>
 
             <h3>Available Endpoints</h3>
+            
             <div class="endpoint-section">
-                <h4>Get Podcast Host Information</h4>
+                <h4>Get Podcast Information</h4>
                 <pre><code>GET /api/podcast/{id}</code></pre>
-                <p>Returns host information for a specific podcast using the Podcast Index Feed ID.</p>
+                <p>Returns podcast details and host information for a specific podcast using the Podcast Index Feed ID. Includes both podcast-level hosts and any Podcast 2.0 person tags from the feed.</p>
+                
+                <h4>Get Episodes for a Podcast</h4>
+                <pre><code>GET /api/podcast/{id}/episodes</code></pre>
+                <p>Returns episodes for a specific podcast, including guest information and episode-level person data from Podcast 2.0 feeds. Supports optional <code>limit</code> parameter (default: 20, max: 100).</p>
                 
                 <h4>Get Host Details</h4>
                 <pre><code>GET /api/hosts/{id}</code></pre>
                 <p>Returns detailed information about hosts associated with a podcast.</p>
 
-                <h4>Download Database</h4>
+                <h4>Download Full Database</h4>
                 <pre><code>GET /api/download-database</code></pre>
                 <p>Downloads the entire SQLite database for offline use.</p>
+                
+                <h4>Get Public Dataset</h4>
+                <pre><code>GET /api/public-dataset</code></pre>
+                <p>Downloads a JSON export of all public data including hosts, podcasts, episodes, and guest relationships.</p>
+                
+                <h4>Additional Endpoints</h4>
+                <pre><code>GET /api/recent-hosts</code></pre>
+                <p>Returns recently added hosts.</p>
+                
+                <pre><code>GET /api/search-podcasts?query={term}</code></pre>
+                <p>Search for podcasts by name.</p>
+                
+                <pre><code>GET /api/stats</code></pre>
+                <p>Returns database statistics.</p>
+                
+                <pre><code>GET /api/popular-podcasts</code></pre>
+                <p>Returns popular podcasts based on host count.</p>
             </div>
 
             <h3>Database Schema</h3>
-            <p>The SQLite database includes the following tables:</p>
+            <p>The SQLite database includes the following main tables:</p>
+            
             <div class="code-example">
-                <pre><code>CREATE TABLE hosts (
+                <pre><code>-- Hosts and Guests
+CREATE TABLE hosts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
-    role TEXT,
     description TEXT,
     link TEXT,
     img TEXT,
+    created_at DATETIME
+);
+
+-- Podcast-Host relationships
+CREATE TABLE host_podcasts (
+    host_id INTEGER,
     podcast_id INTEGER,
-    podcast_title TEXT,
+    role TEXT,
     status TEXT,
+    created_at DATETIME
+);
+
+-- Episodes
+CREATE TABLE episodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    podcast_id INTEGER,
+    title TEXT,
+    description TEXT,
+    audio_url TEXT UNIQUE,
+    pub_date DATETIME,
+    duration INTEGER,
+    season_number INTEGER,
+    episode_number INTEGER,
+    image_url TEXT,
+    link TEXT,
+    guid TEXT,
+    status TEXT,
+    created_at DATETIME
+);
+
+-- Episode-Guest relationships
+CREATE TABLE episode_guests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    episode_id INTEGER,
+    host_id INTEGER,
+    role TEXT,
+    status TEXT,
+    approval_key TEXT,
+    approval_key_expires_at DATETIME,
     created_at DATETIME
 );</code></pre>
             </div>
 
             <h3>Example Integration</h3>
+            
+            <h4>Getting Podcast Hosts</h4>
             <div class="code-example">
-                <pre><code>// Example JavaScript code
+                <pre><code>// Get podcast information including hosts
 async function getPodcastHosts(podcastId) {
-    const response = await fetch(`https://api.podpeople.db/podcast/${podcastId}`);
+    const response = await fetch(`https://podpeople.db/api/podcast/${podcastId}`);
     const data = await response.json();
-    return data.hosts;
+    return data.hosts; // Array of hosts from Podcast 2.0 or database
 }</code></pre>
             </div>
+            
+            <h4>Getting Episode Guests</h4>
+            <div class="code-example">
+                <pre><code>// Get episodes with guest information
+async function getEpisodesWithGuests(podcastId, limit = 20) {
+    const response = await fetch(`https://podpeople.db/api/podcast/${podcastId}/episodes?limit=${limit}`);
+    const episodes = await response.json();
+    
+    // Each episode includes:
+    // - episode.guests: array of approved guests
+    // - episode.can_add_guests: boolean if submissions allowed
+    // - episode.guest_count: number of guests
+    return episodes;
+}</code></pre>
+            </div>
+            
+            <h4>Directing Users to Episode Pages</h4>
+            <div class="code-example">
+                <pre><code>// Generate episode page URLs for guest submissions
+function getEpisodePageUrl(podcastId, audioUrl) {
+    const encodedAudioUrl = encodeURIComponent(audioUrl);
+    return `https://podpeople.db/episode/${podcastId}/${encodedAudioUrl}`;
+}
+
+// Example: Create a "Submit Guest" button
+function createSubmitGuestButton(episode, podcastId) {
+    if (!episode.can_add_guests) return null; // No submissions allowed
+    
+    const button = document.createElement('a');
+    button.href = getEpisodePageUrl(podcastId, episode.audio_url);
+    button.textContent = 'Submit Guest Information';
+    button.target = '_blank';
+    return button;
+}</code></pre>
+            </div>
+            
+            <h4>Complete Example</h4>
+            <div class="code-example">
+                <pre><code>// Complete integration example
+async function displayPodcastWithEpisodes(podcastId) {
+    try {
+        // Get podcast info
+        const podcastResponse = await fetch(`https://podpeople.db/api/podcast/${podcastId}`);
+        const podcast = await podcastResponse.json();
+        
+        // Get episodes
+        const episodesResponse = await fetch(`https://podpeople.db/api/podcast/${podcastId}/episodes`);
+        const episodes = await episodesResponse.json();
+        
+        // Display podcast hosts
+        console.log('Podcast Hosts:', podcast.hosts);
+        
+        // Display episodes with guests
+        episodes.forEach(episode => {
+            console.log(`Episode: ${episode.title}`);
+            console.log(`Guests:`, episode.guests);
+            
+            if (episode.can_add_guests) {
+                const episodeUrl = getEpisodePageUrl(podcastId, episode.audio_url);
+                console.log(`Guest submission URL: ${episodeUrl}`);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    }
+}</code></pre>
+            </div>
+
+            <h3>Episode Guest Functionality</h3>
+            <p>PodPeopleDB supports episode-level guest tracking with the following features:</p>
+            
+            <h4>Podcast 2.0 Compatibility</h4>
+            <ul>
+                <li><strong>Automatic Import:</strong> Episode-level <code>podcast:person</code> tags are automatically parsed and displayed</li>
+                <li><strong>No Manual Submissions:</strong> If a podcast uses Podcast 2.0 tags, manual guest submissions are disabled to prevent conflicts</li>
+                <li><strong>Feed-Level vs Episode-Level:</strong> Both podcast-level and episode-specific person data are supported</li>
+            </ul>
+            
+            <h4>Manual Guest Submissions</h4>
+            <p>For podcasts without Podcast 2.0 tags, users can submit episode guests:</p>
+            <ul>
+                <li>Direct users to: <code>https://podpeople.db/episode/{podcastId}/{encodedAudioUrl}</code></li>
+                <li>Users can submit guest information specific to that episode</li>
+                <li>All submissions require admin approval</li>
+                <li>Episodes are automatically created when parsing podcast RSS feeds</li>
+            </ul>
+            
+            <h4>URL Structure</h4>
+            <div class="code-example">
+                <pre><code>// Podcast page (hosts and episodes list)
+https://podpeople.db/podcast/{podcastId}
+
+// Episode page (episode details and guests)
+https://podpeople.db/episode/{podcastId}/{encodedAudioUrl}
+
+// Example episode URL
+https://podpeople.db/episode/123456/https%3A%2F%2Fexample.com%2Fepisode.mp3</code></pre>
+            </div>
+            
+            <h3>Integration Best Practices</h3>
+            <ul>
+                <li><strong>Check episode.can_add_guests:</strong> Only show guest submission options when true</li>
+                <li><strong>Use proper URL encoding:</strong> Always encode audio URLs when generating episode page links</li>
+                <li><strong>Respect Podcast 2.0:</strong> Display feed-sourced data as authoritative</li>
+                <li><strong>Provide fallbacks:</strong> Use PodPeopleDB data when podcasts don't have person tags</li>
+                <li><strong>Enable community contributions:</strong> Link to episode pages for user-generated content</li>
+            </ul>
 
             <h3>Rate Limits</h3>
             <p>Currently, there are no rate limits in place, but please be considerate with your API usage.</p>
 
             <div class="docs-nav">
-                <a href="/docs/adding-hosts" class="docs-nav-link prev">← Previous: Adding Hosts and Guests</a>
+                <a href="/docs/adding-hosts" class="docs-nav-link prev"><i class="ph ph-arrow-left"></i> Previous: Adding Hosts and Guests</a>
                 <a href="/docs/self-host" class="docs-nav-link">Next: Self-Host PodPeopleDB →</a>
             </div>
         </div>

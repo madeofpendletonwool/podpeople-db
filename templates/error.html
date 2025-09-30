@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Error - PodPeopleDB</title>
+        <link rel="stylesheet" href="/static/styles.css?v=1.1" />
+        <link rel="icon" type="image/x-icon" href="/static/podpeople.ico" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="container">
+            <a href="/" class="docs-home-link">
+                <img
+                    src="/static/podpeople.png"
+                    alt="PodPeopleDB Logo"
+                    class="logo"
+                />
+            </a>
+            <h1>Oops! Something went wrong</h1>
+
+            <div class="error-container">
+                <div class="error-icon">
+                    <svg
+                        width="64"
+                        height="64"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="#f44336"
+                            stroke-width="2"
+                        />
+                        <path
+                            d="M12 7V13"
+                            stroke="#f44336"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                        />
+                        <circle cx="12" cy="16" r="1" fill="#f44336" />
+                    </svg>
+                </div>
+
+                <h2>Podcast Not Found</h2>
+
+                <p class="error-message">
+                    We couldn't find information for the podcast you requested.
+                    The Podcast Index API returned an error:
+                </p>
+
+                <div class="error-details">
+                    <pre>
+Error getting podcast details: invalid character 'R' looking for beginning of value</pre
+                    >
+                </div>
+
+                <p>This usually happens when:</p>
+                <ul class="error-list">
+                    <li>The podcast ID doesn't exist in the Podcast Index</li>
+                    <li>You entered '0' as the podcast ID</li>
+                    <li>
+                        There was a temporary issue with the Podcast Index API
+                    </li>
+                </ul>
+
+                <div class="error-actions">
+                    <a href="/" class="primary-button">Return to Home</a>
+                    <a href="/docs/what-is-this-for" class="secondary-button"
+                        >View Documentation</a
+                    >
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .error-container {
+                background-color: #1a1a1a;
+                border-radius: 10px;
+                padding: 2rem;
+                margin-top: 2rem;
+                text-align: left;
+                border-left: 4px solid #f44336;
+            }
+
+            .error-icon {
+                display: flex;
+                justify-content: center;
+                margin-bottom: 1.5rem;
+            }
+
+            .error-message {
+                font-size: 1.1rem;
+                margin-bottom: 1.5rem;
+                color: #ccc;
+            }
+
+            .error-details {
+                background-color: #111;
+                border-radius: 5px;
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+                overflow-x: auto;
+            }
+
+            .error-details pre {
+                margin: 0;
+                color: #f44336;
+                font-family: monospace;
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+
+            .error-list {
+                margin-left: 1.5rem;
+                margin-bottom: 2rem;
+                color: #ccc;
+            }
+
+            .error-list li {
+                margin-bottom: 0.5rem;
+            }
+
+            .error-actions {
+                display: flex;
+                justify-content: center;
+                gap: 1rem;
+                margin-top: 2rem;
+            }
+
+            .primary-button,
+            .secondary-button {
+                display: inline-block;
+                padding: 12px 24px;
+                border-radius: 5px;
+                text-decoration: none;
+                font-weight: bold;
+                transition: all 0.3s ease;
+            }
+
+            .primary-button {
+                background-color: #4a90e2;
+                color: white;
+            }
+
+            .primary-button:hover {
+                background-color: #357abd;
+                transform: translateY(-2px);
+            }
+
+            .secondary-button {
+                background-color: #333;
+                color: white;
+            }
+
+            .secondary-button:hover {
+                background-color: #444;
+                transform: translateY(-2px);
+            }
+        </style>
+    </body>
+</html>

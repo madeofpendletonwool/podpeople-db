@@ -1,0 +1,13 @@
+{{if .Message}}
+    <div class="no-podcasts-message">{{.Message}}</div>
+{{else}}
+    {{range .Podcasts}}
+        <div class="featured-podcast-card" onclick="window.location.href='/podcast/{{.PodcastID}}'">
+            <h4>{{.Title}}</h4>
+            <p class="host-count">{{.HostCount}} host{{if ne .HostCount 1}}s{{end}}</p>
+            {{if .Description}}
+                <p class="podcast-description">{{.Description}}</p>
+            {{end}}
+        </div>
+    {{end}}
+{{end}}

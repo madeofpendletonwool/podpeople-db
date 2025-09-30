@@ -1,0 +1,348 @@
+{{if .Episodes}}
+<div class="episodes-grid">
+    {{range .Episodes}}
+    <div class="episode-card">
+        <div class="episode-header">
+            {{if .ImageURL}}
+            <img src="{{.ImageURL}}" alt="{{.Title}}" class="episode-image" />
+            {{end}}
+            <div class="episode-meta">
+                <h3 class="episode-title">
+                    <a href="/episode/{{$.PodcastID}}/{{.AudioURL | urlquery}}" class="episode-title-link">
+                        {{.Title}}
+                    </a>
+                </h3>
+                <div class="episode-info">
+                    <span class="episode-date">{{.PubDate.Format "Jan 2, 2006"}}</span>
+                    {{if gt .Duration 0}}
+                    <span class="episode-duration">{{printf "%.0f" (.Duration | DurationMinutes)}} min</span>
+                    {{end}}
+                    {{if .SeasonNumber}}{{if .EpisodeNumber}}
+                    <span class="episode-number">S{{.SeasonNumber}}E{{.EpisodeNumber}}</span>
+                    {{end}}{{end}}
+                </div>
+            </div>
+        </div>
+        
+        {{if .Description}}
+        <div class="episode-description">
+            {{Truncate .Description 200}}
+        </div>
+        {{end}}
+        
+        {{if .Guests}}
+        <div class="episode-guests">
+            <h4 class="guests-title"><i class="ph ph-users"></i> Guests:</h4>
+            <div class="guests-list">
+                {{range .Guests}}
+                <div class="guest-item">
+                    {{if .Img}}
+                    <img src="{{.Img}}" alt="{{.Name}}" class="guest-avatar" />
+                    {{else}}
+                    <div class="guest-avatar-placeholder">{{index .Name 0}}</div>
+                    {{end}}
+                    <div class="guest-info">
+                        <span class="guest-name">{{.Name}}</span>
+                        {{if .Podcasts}}
+                        <span class="guest-role">{{(index .Podcasts 0).Role}}</span>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+        
+        <div class="episode-actions">
+            <a href="{{.AudioURL}}" target="_blank" class="episode-link">
+                <i class="ph ph-headphones"></i> Listen
+            </a>
+            <a href="/episode/{{$.PodcastID}}/{{.AudioURL | urlquery}}" class="episode-link internal-episode-link">
+                <i class="ph ph-info"></i> Episode Details
+            </a>
+            {{if .Link}}
+            <a href="{{.Link}}" target="_blank" class="episode-link">
+                <i class="ph ph-link"></i> Episode Page
+            </a>
+            {{end}}
+            
+            {{if .CanAddGuests}}
+            <button class="add-guest-btn" 
+                    data-audio-url="{{.AudioURL}}" 
+                    data-title="{{.Title}}">
+                <i class="ph ph-user-plus"></i> Add Guest
+            </button>
+            {{end}}
+            
+            {{if gt .GuestCount 0}}
+            <span class="guest-count">{{.GuestCount}} guests</span>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+</div>
+
+<!-- Add Guest Modal -->
+<div id="guest-modal" class="modal" style="display: none;">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Guest to Episode</h2>
+            <button class="modal-close" onclick="closeGuestModal()">×</button>
+        </div>
+        
+        <form id="guest-form" class="modal-form">
+            <input type="hidden" id="episode-audio-url" name="episodeAudioUrl" />
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="guest-search">Name</label>
+                    <div class="input-with-search">
+                        <input
+                            type="text"
+                            id="guest-search"
+                            name="guestName"
+                            placeholder="Full name"
+                            required
+                        />
+                        <div id="guest-search-results" class="search-dropdown hidden"></div>
+                    </div>
+                </div>
+                
+                <!-- Hidden role field - automatically set to guest for episode-level submissions -->
+                <input type="hidden" id="guest-role" name="role" value="guest" />
+                
+                <div class="form-group full-width">
+                    <label for="guest-description">Description</label>
+                    <textarea
+                        name="description"
+                        id="guest-description"
+                        placeholder="Brief description of this person"
+                        required
+                        rows="3"
+                    ></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="guest-link">Link</label>
+                    <input
+                        type="url"
+                        name="link"
+                        id="guest-link"
+                        placeholder="https://example.com"
+                        required
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <label for="guest-img">Image URL (Optional)</label>
+                    <input
+                        type="url"
+                        name="img"
+                        id="guest-img"
+                        placeholder="https://example.com/image.jpg"
+                    />
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button type="button" class="btn-cancel" onclick="closeGuestModal()">Cancel</button>
+                <button type="submit" class="btn-save">Add Guest</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast notification -->
+<div id="guest-toast" class="toast-notification">
+    <div class="toast-content">
+        <span class="toast-icon">✓</span>
+        <span class="toast-message"></span>
+    </div>
+</div>
+
+<script>
+function openGuestModal(audioUrl, episodeTitle) {
+    console.log('Setting audio URL in hidden field:', audioUrl);
+    document.getElementById('episode-audio-url').value = audioUrl;
+    document.querySelector('#guest-modal h2').textContent = `Add Guest to "${episodeTitle}"`;
+    document.getElementById('guest-modal').style.display = 'flex';
+    document.getElementById('guest-search').focus();
+}
+
+// Use event delegation to handle dynamically loaded "Add Guest" buttons
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('add-guest-btn')) {
+        const audioUrl = event.target.getAttribute('data-audio-url');
+        const title = event.target.getAttribute('data-title');
+        console.log('Opening guest modal for:', audioUrl, title);
+        openGuestModal(audioUrl, title);
+    }
+});
+
+function closeGuestModal() {
+    document.getElementById('guest-modal').style.display = 'none';
+    document.getElementById('guest-form').reset();
+    document.getElementById('guest-search-results').classList.add('hidden');
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('guest-toast');
+    const messageEl = document.querySelector('#guest-toast .toast-message');
+    const iconEl = document.querySelector('#guest-toast .toast-icon');
+    
+    messageEl.textContent = message;
+    iconEl.textContent = type === 'error' ? '⚠' : '✓';
+    toast.className = `toast-notification ${type}`;
+    toast.classList.add('show');
+    
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 4000);
+}
+
+// Guest search functionality (similar to host search)
+document.getElementById('guest-search').addEventListener('input', function(e) {
+    const query = e.target.value;
+    if (query.length < 3) {
+        document.getElementById('guest-search-results').classList.add('hidden');
+        return;
+    }
+    
+    // Implement guest search - for now, reuse host search
+    fetch(`/search-hosts?name=${encodeURIComponent(query)}`)
+        .then(response => response.text())
+        .then(html => {
+            const results = document.getElementById('guest-search-results');
+            // Modify the HTML to work with guest form instead of host form
+            const modifiedHtml = html.replace(/hx-get="\/get-host-details\?id=(\d+)"/g, 'data-guest-id="$1"')
+                                    .replace(/hx-target="#host-form"/g, '')
+                                    .replace(/hx-trigger="click"/g, '')
+                                    .replace(/hx-swap="none"/g, '')
+                                    .replace(/onclick="closeSuggestions\(\)"/g, 'onclick="selectGuest(this)"');
+            results.innerHTML = modifiedHtml;
+            if (html.trim()) {
+                results.classList.remove('hidden');
+            } else {
+                results.classList.add('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Error searching for guests:', error);
+            document.getElementById('guest-search-results').classList.add('hidden');
+        });
+});
+
+// Function to select a guest from search results
+function selectGuest(element) {
+    const guestId = element.getAttribute('data-guest-id');
+    const guestName = element.querySelector('.text-white').textContent;
+    
+    // Set the guest name in the input field
+    document.getElementById('guest-search').value = guestName;
+    
+    // Hide the search results
+    document.getElementById('guest-search-results').classList.add('hidden');
+    
+    // Fetch and populate full guest details
+    if (guestId) {
+        console.log('Fetching details for guest ID:', guestId);
+        fetch(`/get-host-details?id=${guestId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(host => {
+                console.log('Received host details:', host);
+                // The API returns the host directly, not wrapped in a success object
+                document.getElementById('guest-search').value = host.name || guestName;
+                document.getElementById('guest-description').value = host.description || '';
+                document.getElementById('guest-link').value = host.link || '';
+                document.getElementById('guest-img').value = host.img || '';
+                // Role is automatically set to guest, no need to update
+            })
+            .catch(error => {
+                console.error('Error fetching guest details:', error);
+                // If fetch fails, just keep the name that was set
+                // Role is automatically set to guest, no need to update
+            });
+    } else {
+        console.log('No guest ID found, role automatically set to guest');
+        // Role is automatically set to guest, no need to update
+    }
+}
+
+// Handle guest form submission
+document.getElementById('guest-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const episodeAudioUrl = formData.get('episodeAudioUrl');
+    const guestName = formData.get('guestName');
+    const role = formData.get('role');
+    const description = formData.get('description');
+    const link = formData.get('link');
+    const img = formData.get('img');
+    
+    console.log('Form submission data:', {
+        episodeAudioUrl: episodeAudioUrl,
+        guestName: guestName,
+        role: role,
+        description: description,
+        link: link,
+        img: img
+    });
+    
+    // Disable submit button
+    const submitBtn = this.querySelector('.btn-save');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    
+    // Submit guest data with all fields
+    const submitData = new FormData();
+    submitData.append('episodeAudioUrl', episodeAudioUrl);
+    submitData.append('guestName', guestName);
+    submitData.append('role', role);
+    submitData.append('description', description);
+    submitData.append('link', link);
+    submitData.append('img', img);
+    
+    fetch('/add-episode-guest', {
+        method: 'POST',
+        body: submitData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeGuestModal();
+            // Show success toast
+            showToast(data.message || 'Guest submission received! It will be reviewed by administrators.');
+            // Note: Guest will appear after admin approval, no need to reload page
+        } else {
+            // Show error toast
+            showToast(data.error || 'Failed to submit guest. Please try again.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting guest:', error);
+        showToast('Network error. Please try again.', 'error');
+    })
+    .finally(() => {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    });
+});
+</script>
+
+{{else}}
+<div class="empty-episodes">
+    <div class="empty-icon"><i class="ph ph-headphones"></i></div>
+    <h3>No Episodes Found</h3>
+    <p>This podcast doesn't have any episodes available yet, or we couldn't load them from the feed.</p>
+</div>
+{{end}}
