@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - PodPeopleDB</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=1.1">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -416,10 +416,10 @@
                 </div>
 
                 <div class="form-field">
-                    <label>
+                    <div class="checkbox-wrapper">
                         <input type="checkbox" id="confirm-full-import" name="confirm" required>
-                        I understand this will replace ALL existing data
-                    </label>
+                        <label for="confirm-full-import">I understand this will replace ALL existing data</label>
+                    </div>
                 </div>
 
                 <div class="modal-actions">
@@ -531,6 +531,15 @@
                     }
                 });
             });
+
+            // Enable/disable full import button based on confirmation checkbox
+            const confirmCheckbox = document.getElementById('confirm-full-import');
+            const fullImportBtn = document.getElementById('full-import-btn');
+            if (confirmCheckbox && fullImportBtn) {
+                confirmCheckbox.addEventListener('change', function() {
+                    fullImportBtn.disabled = !this.checked;
+                });
+            }
         });
 
         function switchSection(section) {
@@ -845,32 +854,34 @@
 
         // Import modal functions
         function openDatasetImportModal() {
-            document.getElementById('dataset-import-modal').style.display = 'flex';
+            const modal = document.getElementById('dataset-import-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
             document.getElementById('dataset-file').focus();
         }
 
         function closeDatasetImportModal() {
             const modal = document.getElementById('dataset-import-modal');
-            modal.style.display = 'none';
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
             document.getElementById('dataset-import-form').reset();
         }
 
         function openFullImportModal() {
-            document.getElementById('full-import-modal').style.display = 'flex';
+            const modal = document.getElementById('full-import-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
             document.getElementById('full-database-file').focus();
         }
 
         function closeFullImportModal() {
             const modal = document.getElementById('full-import-modal');
-            modal.style.display = 'none';
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
             document.getElementById('full-import-form').reset();
             document.getElementById('full-import-btn').disabled = true;
         }
 
-        // Enable/disable full import button based on confirmation checkbox
-        document.getElementById('confirm-full-import').addEventListener('change', function() {
-            document.getElementById('full-import-btn').disabled = !this.checked;
-        });
 
         // Dataset import form submission
         document.getElementById('dataset-import-form').addEventListener('submit', async function(e) {

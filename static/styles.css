@@ -3633,6 +3633,16 @@ input[name="name"] {
     transform: translateY(-1px);
 }
 
+.internal-episode-link {
+    background: #4a90e2 !important;
+    border-color: #4a90e2 !important;
+}
+
+.internal-episode-link:hover {
+    background: #357abd !important;
+    border-color: #357abd !important;
+}
+
 .add-guest-btn {
     display: inline-flex;
     align-items: center;
@@ -5003,4 +5013,106 @@ input[name="name"] {
     color: var(--admin-text-secondary);
     margin: 0;
     line-height: 1.4;
+}
+
+/* Episode Page Specific Styles */
+.episode-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.episode-breadcrumb .podcast-link {
+    color: #9c27b0;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.episode-breadcrumb .podcast-link:hover {
+    color: #e91e63;
+    text-decoration: underline;
+}
+
+.episode-breadcrumb .separator {
+    color: #666;
+    font-weight: 300;
+}
+
+.episode-breadcrumb .episode-date {
+    color: #aaa;
+    font-weight: 400;
+}
+
+.back-podcast {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #9c27b0;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+    padding: 0.5rem 0;
+}
+
+.back-podcast:hover {
+    color: #e91e63;
+}
+
+.back-podcast i {
+    font-size: 1.1rem;
+}
+
+/* Episode Title Link Styling */
+.episode-title-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.episode-title-link:hover {
+    color: #9c27b0;
+    text-decoration: none;
+}
+
+.episode-title-link:visited {
+    color: inherit;
+}
+
+/* Responsive adjustments for episode page */
+@media (max-width: 768px) {
+    .back-podcast span {
+        display: none;
+    }
+    
+    .episode-breadcrumb {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .episode-breadcrumb .separator {
+        display: none;
+    }
+}
+
+/* Checkbox wrapper styling */
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    width: auto !important;
+    margin: 0;
+    transform: scale(1.2);
+}
+
+.checkbox-wrapper label {
+    margin: 0 !important;
+    cursor: pointer;
+    font-weight: 500;
 }

@@ -1,13 +1,17 @@
-{{if .}}
+{{if .Episodes}}
 <div class="episodes-grid">
-    {{range .}}
+    {{range .Episodes}}
     <div class="episode-card">
         <div class="episode-header">
             {{if .ImageURL}}
             <img src="{{.ImageURL}}" alt="{{.Title}}" class="episode-image" />
             {{end}}
             <div class="episode-meta">
-                <h3 class="episode-title">{{.Title}}</h3>
+                <h3 class="episode-title">
+                    <a href="/episode/{{$.PodcastID}}/{{.AudioURL | urlquery}}" class="episode-title-link">
+                        {{.Title}}
+                    </a>
+                </h3>
                 <div class="episode-info">
                     <span class="episode-date">{{.PubDate.Format "Jan 2, 2006"}}</span>
                     {{if gt .Duration 0}}
@@ -52,6 +56,9 @@
         <div class="episode-actions">
             <a href="{{.AudioURL}}" target="_blank" class="episode-link">
                 <i class="ph ph-headphones"></i> Listen
+            </a>
+            <a href="/episode/{{$.PodcastID}}/{{.AudioURL | urlquery}}" class="episode-link internal-episode-link">
+                <i class="ph ph-info"></i> Episode Details
             </a>
             {{if .Link}}
             <a href="{{.Link}}" target="_blank" class="episode-link">

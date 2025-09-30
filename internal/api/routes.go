@@ -13,6 +13,7 @@ func (s *Server) registerRoutes() {
 	s.Router.Get("/search", s.SearchPageHandler)
 	s.Router.Get("/podcast/{id}", s.PodcastHandler)
 	s.Router.Get("/podcast/", s.PodcastHandler) // For query param version
+	s.Router.Get("/episode/{podcastId}/{audioUrl}", s.EpisodeHandler)
 	s.Router.Post("/add-host", s.AddHostHandler)
 	s.Router.Post("/add-episode-guest", s.AddEpisodeGuestHandler)
 	s.Router.Get("/search-hosts", s.SearchHostsHandler)
@@ -26,9 +27,10 @@ func (s *Server) registerRoutes() {
 
 	// Admin routes (with auth middleware)
 	s.Router.Route("/admin", func(r chi.Router) {
-		// Login route (no auth required)
+		// Login/logout routes (no auth required)
 		r.Get("/login", s.AdminLoginPageHandler)
 		r.Post("/login", s.AdminLoginHandler)
+		r.Get("/logout", s.AdminLogoutHandler)
 
 		// Routes that require authentication
 		r.Group(func(r chi.Router) {
@@ -44,6 +46,7 @@ func (s *Server) registerRoutes() {
 			r.Delete("/delete-admin/{id}", s.DeleteAdminHandler)
 			r.Put("/edit-host", s.EditHostHandler)
 			r.Delete("/delete-host/{id}", s.DeleteHostHandler)
+			r.Post("/import-dataset", s.ImportDatasetHandler)
 			r.Post("/import-database", s.ImportDatabaseHandler)
 			r.Get("/export-full-database", s.AdminExportFullDatabaseHandler)
 		})

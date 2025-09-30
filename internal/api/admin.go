@@ -85,6 +85,15 @@ func (s *Server) AdminLoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
 }
 
+// AdminLogoutHandler handles admin logout
+func (s *Server) AdminLogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Clear the session
+	s.SessionManager.Clear(r.Context())
+	
+	// Redirect to homepage
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 // AdminDashboardHandler handles the admin dashboard
 func (s *Server) AdminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	// Get pending hosts
@@ -230,9 +239,12 @@ func (s *Server) AddAdminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
+	// Parse both form data and multipart form data
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Invalid form data", http.StatusBadRequest)
+			return
+		}
 	}
 
 	username := r.FormValue("username")
@@ -270,9 +282,12 @@ func (s *Server) EditAdminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
+	// Parse both form data and multipart form data
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Invalid form data", http.StatusBadRequest)
+			return
+		}
 	}
 
 	adminID, err := strconv.Atoi(r.FormValue("adminId"))
@@ -525,6 +540,159 @@ func (s *Server) ImportDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	log.Printf("Database imported successfully from file: %s (%d records)", header.Filename, recordCount)
+}
+
+// ImportDatasetHandler handles importing a JSON dataset file
+func (s *Server) ImportDatasetHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse multipart form (32MB max file size)
+	err := r.ParseMultipartForm(32 << 20) // 32MB
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to parse form: " + err.Error()})
+		return
+	}
+
+	// Get the uploaded file
+	file, header, err := r.FormFile("dataset")
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "No dataset file provided: " + err.Error()})
+		return
+	}
+	defer file.Close()
+
+	// Validate file size (limit to 50MB)
+	if header.Size > 50<<20 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "File too large. Maximum size is 50MB"})
+		return
+	}
+
+	// Validate file extension
+	ext := filepath.Ext(header.Filename)
+	if ext != ".json" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid file type. Only .json files are allowed"})
+		return
+	}
+
+	// Read and parse JSON
+	jsonData, err := io.ReadAll(file)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to read file: " + err.Error()})
+		return
+	}
+
+	// Parse JSON structure - expect the same format as public dataset export
+	var dataset models.PublicDataset
+
+	if err := json.Unmarshal(jsonData, &dataset); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON format: " + err.Error()})
+		return
+	}
+
+	// Import the data (this is a safe import that preserves existing users/admins)
+	recordsImported := 0
+	errors := []string{}
+	
+	// For now, we'll implement a basic import that directly inserts approved data
+	// This should be enhanced later with proper conflict resolution
+	
+	// Import hosts 
+	for _, host := range dataset.Hosts {
+		_, err := db.DB.Exec(`
+			INSERT OR IGNORE INTO hosts (name, description, link, img) 
+			VALUES (?, ?, ?, ?)`,
+			host.Name, host.Description, host.Link, host.Img)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to import host %s: %v", host.Name, err))
+		} else {
+			recordsImported++
+		}
+	}
+
+	// Import podcasts
+	for _, podcast := range dataset.Podcasts {
+		_, err := db.DB.Exec(`
+			INSERT OR IGNORE INTO podcasts (id, title, feed_url) 
+			VALUES (?, ?, ?)`,
+			podcast.ID, podcast.Title, podcast.FeedURL)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to import podcast %s: %v", podcast.Title, err))
+		} else {
+			recordsImported++
+		}
+	}
+
+	// Import host-podcast relationships (as approved)
+	for _, hostPodcast := range dataset.HostPodcasts {
+		_, err := db.DB.Exec(`
+			INSERT OR IGNORE INTO host_podcasts (host_id, podcast_id, role, status) 
+			VALUES (?, ?, ?, 'approved')`,
+			hostPodcast.HostID, hostPodcast.PodcastID, hostPodcast.Role)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to import host-podcast relationship: %v", err))
+		} else {
+			recordsImported++
+		}
+	}
+
+	// Import episodes
+	for _, episode := range dataset.Episodes {
+		_, err := db.DB.Exec(`
+			INSERT OR IGNORE INTO episodes (id, podcast_id, title, description, audio_url, pub_date, duration, season_number, episode_number, image_url, link, guid, status) 
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
+			episode.ID, episode.PodcastID, episode.Title, episode.Description, episode.AudioURL, 
+			episode.PubDate, episode.Duration, episode.SeasonNumber, episode.EpisodeNumber,
+			episode.ImageURL, episode.Link, episode.GUID)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to import episode %s: %v", episode.Title, err))
+		} else {
+			recordsImported++
+		}
+	}
+
+	// Import episode guests
+	for _, guest := range dataset.EpisodeGuests {
+		_, err := db.DB.Exec(`
+			INSERT OR IGNORE INTO episode_guests (episode_id, host_id, role, status) 
+			VALUES (?, ?, ?, 'approved')`,
+			guest.EpisodeID, guest.HostID, guest.Role)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to import episode guest: %v", err))
+		} else {
+			recordsImported++
+		}
+	}
+
+	// Log any errors that occurred
+	for _, errMsg := range errors {
+		log.Printf("Import warning: %s", errMsg)
+	}
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":         true,
+		"message":         fmt.Sprintf("Dataset imported successfully. %d records imported.", recordsImported),
+		"recordsImported": recordsImported,
+		"filename":        header.Filename,
+	})
+
+	log.Printf("Dataset imported successfully from file: %s (%d records)", header.Filename, recordsImported)
 }
 
 // AdminExportFullDatabaseHandler handles exporting the complete database for admins

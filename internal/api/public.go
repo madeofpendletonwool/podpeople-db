@@ -497,8 +497,16 @@ func (s *Server) GetEpisodesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Render episodes template
-	if err := s.TemplateManager.Render(w, "episodes-list.html", episodes); err != nil {
+	// Render episodes template with podcast ID
+	data := struct {
+		Episodes  []models.EpisodeSummary `json:"episodes"`
+		PodcastID string                 `json:"podcast_id"`
+	}{
+		Episodes:  episodes,
+		PodcastID: podcastID,
+	}
+	
+	if err := s.TemplateManager.Render(w, "episodes-list.html", data); err != nil {
 		log.Printf("Error rendering episodes template: %v", err)
 		http.Error(w, "Failed to render episodes", http.StatusInternalServerError)
 	}
@@ -760,5 +768,152 @@ func (s *Server) GetPopularPodcastsHandler(w http.ResponseWriter, r *http.Reques
 
 	if err := s.TemplateManager.Render(w, "popular_podcasts.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// EpisodeHandler handles the individual episode page
+func (s *Server) EpisodeHandler(w http.ResponseWriter, r *http.Request) {
+	podcastID := chi.URLParam(r, "podcastId")
+	audioURL := chi.URLParam(r, "audioUrl")
+
+	if podcastID == "" || audioURL == "" {
+		data := struct {
+			Title   string
+			Message string
+		}{
+			Title:   "Missing Parameters",
+			Message: "Both podcast ID and audio URL are required.",
+		}
+
+		if err := s.TemplateManager.Render(w, "error.html", data); err != nil {
+			http.Error(w, "Error rendering error page", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// URL decode the audio URL since it was passed as a path parameter
+	decodedAudioURL, err := url.QueryUnescape(audioURL)
+	if err != nil {
+		log.Printf("Error decoding audio URL: %v", err)
+		decodedAudioURL = audioURL // Fall back to original
+	}
+
+	// Get podcast details
+	podcast, err := s.PodcastService.GetPodcastDetails(podcastID)
+	if err != nil {
+		log.Printf("Error getting podcast details: %v", err)
+		data := struct {
+			Title   string
+			Message string
+		}{
+			Title:   "Podcast Not Found",
+			Message: fmt.Sprintf("Error getting podcast details: %v", err),
+		}
+
+		if err := s.TemplateManager.Render(w, "error.html", data); err != nil {
+			http.Error(w, "Error rendering error page", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Get episode details by audio URL
+	episode, err := s.EpisodeService.GetEpisodeByAudioURL(decodedAudioURL)
+	if err != nil {
+		log.Printf("Error getting episode by audio URL '%s': %v", decodedAudioURL, err)
+		
+		// Try to parse the episode from the RSS feed if it's not in our database yet
+		podcastIDInt, _ := strconv.Atoi(podcastID)
+		episodes, _, err := s.EpisodeService.ParseRSSFeedWithPersons(podcast.FeedURL, podcastIDInt, 0)
+		if err != nil {
+			data := struct {
+				Title   string
+				Message string
+			}{
+				Title:   "Episode Not Found",
+				Message: "This episode could not be found or loaded from the podcast feed.",
+			}
+
+			if err := s.TemplateManager.Render(w, "error.html", data); err != nil {
+				http.Error(w, "Error rendering error page", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		// Find the episode with matching audio URL
+		var foundEpisode *models.Episode
+		for _, ep := range episodes {
+			if ep.AudioURL == decodedAudioURL {
+				foundEpisode = &ep
+				break
+			}
+		}
+
+		if foundEpisode == nil {
+			data := struct {
+				Title   string
+				Message string
+			}{
+				Title:   "Episode Not Found",
+				Message: "This episode does not exist in the podcast feed.",
+			}
+
+			if err := s.TemplateManager.Render(w, "error.html", data); err != nil {
+				http.Error(w, "Error rendering error page", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		episode = *foundEpisode
+	}
+
+	// Get episode-level person data from RSS feed
+	var episodePersons []models.Person
+	if len(podcast.Hosts) > 0 {
+		// Parse RSS to get episode-specific person data
+		podcastIDInt, _ := strconv.Atoi(podcastID)
+		_, episodePersonsMap, err := s.EpisodeService.ParseRSSFeedWithPersons(podcast.FeedURL, podcastIDInt, 0)
+		if err == nil {
+			if persons, exists := episodePersonsMap[decodedAudioURL]; exists {
+				for _, person := range persons {
+					episodePersons = append(episodePersons, models.Person{
+						Name:  person.Name,
+						Role:  person.Role,
+						Group: person.Group,
+						Img:   person.Img,
+						Href:  person.Href,
+					})
+				}
+			}
+		}
+	}
+
+	// Get approved guests for this episode from database
+	dbGuests, _ := models.GetGuestsByEpisodeID(db.DB, episode.ID)
+
+	// Check if the user is an admin
+	isAdmin := s.SessionManager.GetBool(r.Context(), "authenticated")
+
+	// Check if guest submissions are allowed (no Podcast 2.0 person tags)
+	canAddGuests := len(podcast.Hosts) == 0
+
+	data := struct {
+		Podcast        models.Podcast
+		Episode        models.Episode
+		EpisodePersons []models.Person // Podcast 2.0 episode-level persons
+		DBGuests       []models.Host   // Database guests
+		IsAdmin        bool
+		CanAddGuests   bool
+	}{
+		Podcast:        podcast,
+		Episode:        episode,
+		EpisodePersons: episodePersons,
+		DBGuests:       dbGuests,
+		IsAdmin:        isAdmin,
+		CanAddGuests:   canAddGuests,
+	}
+
+	if err := s.TemplateManager.Render(w, "episode.html", data); err != nil {
+		log.Printf("Error executing episode template: %v", err)
+		http.Error(w, fmt.Sprintf("Error rendering page: %v", err), http.StatusInternalServerError)
 	}
 }

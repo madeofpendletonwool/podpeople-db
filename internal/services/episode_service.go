@@ -87,7 +87,7 @@ func (s *EpisodeService) GetEpisodesByPodcastID(podcastID int, limit int) ([]mod
 	}
 
 	// Fetch and parse the RSS feed, also getting episode-level person data
-	episodes, episodePersons, err := s.parseRSSFeedWithPersons(podcast.FeedURL, podcastID, limit)
+	episodes, episodePersons, err := s.ParseRSSFeedWithPersons(podcast.FeedURL, podcastID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse RSS feed: %w", err)
 	}
@@ -143,8 +143,8 @@ func (s *EpisodeService) GetEpisodesByPodcastID(podcastID int, limit int) ([]mod
 	return episodeSummaries, nil
 }
 
-// parseRSSFeedWithPersons parses an RSS feed and returns episodes along with episode-level person data
-func (s *EpisodeService) parseRSSFeedWithPersons(feedURL string, podcastID int, limit int) ([]models.Episode, map[string][]Person, error) {
+// ParseRSSFeedWithPersons parses an RSS feed and returns episodes along with episode-level person data
+func (s *EpisodeService) ParseRSSFeedWithPersons(feedURL string, podcastID int, limit int) ([]models.Episode, map[string][]Person, error) {
 	// Fetch RSS feed
 	resp, err := http.Get(feedURL)
 	if err != nil {

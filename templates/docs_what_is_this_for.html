@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>What is PodPeopleDB - Documentation</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=1.1">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
@@ -27,9 +27,11 @@
 
             <h3>Key Features</h3>
             <ul>
-                <li><strong>Host & Guest Tracking:</strong> Maintain a comprehensive database of podcast hosts and their appearances.</li>
-                <li><strong>Podcast Integration:</strong> Automatic parsing of podcast:person tags from podcast feeds.</li>
-                <li><strong>Community Driven:</strong> Allow users to submit and update host information.</li>
+                <li><strong>Host & Guest Tracking:</strong> Maintain a comprehensive database of podcast hosts and guest appearances across episodes.</li>
+                <li><strong>Episode-Level Granularity:</strong> Track guests on specific episodes, not just podcast-wide hosts.</li>
+                <li><strong>Podcast 2.0 Integration:</strong> Automatic parsing of podcast:person tags from both podcast feeds and individual episodes.</li>
+                <li><strong>Community Driven:</strong> Allow users to submit episode-specific guest information and podcast hosts.</li>
+                <li><strong>Developer Friendly:</strong> REST API access to all data with episode guest endpoints.</li>
                 <li><strong>Open Data:</strong> Free access to the database for developers and podcast apps.</li>
             </ul>
 
@@ -38,10 +40,29 @@
 
             <h3>Use Cases</h3>
             <ul>
-                <li>Track your favorite podcast hosts across different shows</li>
-                <li>Discover all podcast appearances by a specific guest</li>
-                <li>Build podcast apps with enhanced host/guest discovery features</li>
-                <li>Research podcast host networks and connections</li>
+                <li><strong>For Listeners:</strong>
+                    <ul>
+                        <li>Track your favorite podcast hosts across different shows</li>
+                        <li>Discover all episodes where a specific guest has appeared</li>
+                        <li>Contribute guest information for episodes you've listened to</li>
+                        <li>Find episodes based on who appeared as a guest</li>
+                    </ul>
+                </li>
+                <li><strong>For Developers:</strong>
+                    <ul>
+                        <li>Build podcast apps with episode-level guest discovery</li>
+                        <li>Add "Submit Guest Info" buttons that link to episode pages</li>
+                        <li>Display episode guests alongside standard episode metadata</li>
+                        <li>Enable host/guest following across the podcast ecosystem</li>
+                    </ul>
+                </li>
+                <li><strong>For Researchers:</strong>
+                    <ul>
+                        <li>Study podcast guest networks and conversation patterns</li>
+                        <li>Analyze host mobility across different podcast networks</li>
+                        <li>Research episode-level collaboration trends</li>
+                    </ul>
+                </li>
             </ul>
 
             <div class="docs-nav">

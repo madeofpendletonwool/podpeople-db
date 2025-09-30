@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -35,6 +36,9 @@ func NewTemplateManager(templateDir string) (*TemplateManager, error) {
 		},
 		"FormatDate": func(t time.Time) string {
 			return t.Format("Jan 2, 2006")
+		},
+		"urlquery": func(s string) string {
+			return url.QueryEscape(s)
 		},
 	}
 
