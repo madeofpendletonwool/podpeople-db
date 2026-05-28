@@ -607,27 +607,43 @@ func (s *Server) ImportDatasetHandler(w http.ResponseWriter, r *http.Request) {
 	// Import the data (this is a safe import that preserves existing users/admins)
 	recordsImported := 0
 	errors := []string{}
-	
-	// For now, we'll implement a basic import that directly inserts approved data
-	// This should be enhanced later with proper conflict resolution
-	
-	// Import hosts 
+
+	// hostIDMap translates source host IDs to IDs in this database.
+	// Hosts use AUTOINCREMENT so new IDs differ from the source; all
+	// relationship tables (host_podcasts, episode_guests) must be remapped.
+	hostIDMap := make(map[int]int)
+
+	// Import hosts
 	for _, host := range dataset.Hosts {
-		_, err := db.DB.Exec(`
-			INSERT OR IGNORE INTO hosts (name, description, link, img) 
+		// Check if a host with this name already exists.
+		var existingID int
+		err := db.DB.QueryRow(`SELECT id FROM hosts WHERE name = ?`, host.Name).Scan(&existingID)
+		if err == nil {
+			hostIDMap[host.ID] = existingID
+			recordsImported++
+			continue
+		}
+		result, err := db.DB.Exec(`
+			INSERT INTO hosts (name, description, link, img)
 			VALUES (?, ?, ?, ?)`,
 			host.Name, host.Description, host.Link, host.Img)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Failed to import host %s: %v", host.Name, err))
-		} else {
-			recordsImported++
+			continue
 		}
+		newID, err := result.LastInsertId()
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to get ID for host %s: %v", host.Name, err))
+			continue
+		}
+		hostIDMap[host.ID] = int(newID)
+		recordsImported++
 	}
 
-	// Import podcasts
+	// Import podcasts (IDs come from Podcast Index and are globally unique)
 	for _, podcast := range dataset.Podcasts {
 		_, err := db.DB.Exec(`
-			INSERT OR IGNORE INTO podcasts (id, title, feed_url) 
+			INSERT OR IGNORE INTO podcasts (id, title, feed_url)
 			VALUES (?, ?, ?)`,
 			podcast.ID, podcast.Title, podcast.FeedURL)
 		if err != nil {
@@ -637,12 +653,17 @@ func (s *Server) ImportDatasetHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Import host-podcast relationships (as approved)
+	// Import host-podcast relationships using remapped host IDs
 	for _, hostPodcast := range dataset.HostPodcasts {
+		newHostID, ok := hostIDMap[hostPodcast.HostID]
+		if !ok {
+			errors = append(errors, fmt.Sprintf("Skipping host_podcast: no mapping for source host_id %d", hostPodcast.HostID))
+			continue
+		}
 		_, err := db.DB.Exec(`
-			INSERT OR IGNORE INTO host_podcasts (host_id, podcast_id, role, status) 
+			INSERT OR IGNORE INTO host_podcasts (host_id, podcast_id, role, status)
 			VALUES (?, ?, ?, 'approved')`,
-			hostPodcast.HostID, hostPodcast.PodcastID, hostPodcast.Role)
+			newHostID, hostPodcast.PodcastID, hostPodcast.Role)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Failed to import host-podcast relationship: %v", err))
 		} else {
@@ -650,27 +671,55 @@ func (s *Server) ImportDatasetHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// episodeIDMap translates source episode IDs to IDs in this database.
+	// Episodes also use AUTOINCREMENT so we can't rely on source IDs matching.
+	episodeIDMap := make(map[int]int)
+
 	// Import episodes
 	for _, episode := range dataset.Episodes {
-		_, err := db.DB.Exec(`
-			INSERT OR IGNORE INTO episodes (id, podcast_id, title, description, audio_url, pub_date, duration, season_number, episode_number, image_url, link, guid, status) 
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
-			episode.ID, episode.PodcastID, episode.Title, episode.Description, episode.AudioURL, 
+		// Check by audio_url (unique constraint) to detect existing episodes
+		var existingID int
+		err := db.DB.QueryRow(`SELECT id FROM episodes WHERE audio_url = ?`, episode.AudioURL).Scan(&existingID)
+		if err == nil {
+			episodeIDMap[episode.ID] = existingID
+			recordsImported++
+			continue
+		}
+		result, err := db.DB.Exec(`
+			INSERT INTO episodes (podcast_id, title, description, audio_url, pub_date, duration, season_number, episode_number, image_url, link, guid, status)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')`,
+			episode.PodcastID, episode.Title, episode.Description, episode.AudioURL,
 			episode.PubDate, episode.Duration, episode.SeasonNumber, episode.EpisodeNumber,
 			episode.ImageURL, episode.Link, episode.GUID)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Failed to import episode %s: %v", episode.Title, err))
-		} else {
-			recordsImported++
+			continue
 		}
+		newID, err := result.LastInsertId()
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to get ID for episode %s: %v", episode.Title, err))
+			continue
+		}
+		episodeIDMap[episode.ID] = int(newID)
+		recordsImported++
 	}
 
-	// Import episode guests
+	// Import episode guests using remapped host and episode IDs
 	for _, guest := range dataset.EpisodeGuests {
+		newHostID, ok := hostIDMap[guest.HostID]
+		if !ok {
+			errors = append(errors, fmt.Sprintf("Skipping episode_guest: no mapping for source host_id %d", guest.HostID))
+			continue
+		}
+		newEpisodeID, ok := episodeIDMap[guest.EpisodeID]
+		if !ok {
+			errors = append(errors, fmt.Sprintf("Skipping episode_guest: no mapping for source episode_id %d", guest.EpisodeID))
+			continue
+		}
 		_, err := db.DB.Exec(`
-			INSERT OR IGNORE INTO episode_guests (episode_id, host_id, role, status) 
+			INSERT OR IGNORE INTO episode_guests (episode_id, host_id, role, status)
 			VALUES (?, ?, ?, 'approved')`,
-			guest.EpisodeID, guest.HostID, guest.Role)
+			newEpisodeID, newHostID, guest.Role)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Failed to import episode guest: %v", err))
 		} else {
