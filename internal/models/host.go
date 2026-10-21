@@ -44,9 +44,9 @@ func (h *Host) FindByID(db *sql.DB, id int) error {
 // Create creates a new host in the database
 func (h *Host) Create(db *sql.DB) error {
 	result, err := db.Exec(`
-		INSERT INTO hosts (name, description, link, img)
-		VALUES (?, ?, ?, ?)`,
-		h.Name, h.Description, h.Link, h.Img)
+		INSERT INTO hosts (name, name_normalized, description, link, img)
+		VALUES (?, ?, ?, ?, ?)`,
+		h.Name, NormalizeName(h.Name), h.Description, h.Link, h.Img)
 
 	if err != nil {
 		return err
@@ -65,9 +65,9 @@ func (h *Host) Create(db *sql.DB) error {
 func (h *Host) Update(db *sql.DB) error {
 	_, err := db.Exec(`
 		UPDATE hosts
-		SET name = ?, description = ?, link = ?, img = ?
+		SET name = ?, name_normalized = ?, description = ?, link = ?, img = ?
 		WHERE id = ?`,
-		h.Name, h.Description, h.Link, h.Img, h.ID)
+		h.Name, NormalizeName(h.Name), h.Description, h.Link, h.Img, h.ID)
 
 	return err
 }
@@ -196,65 +196,75 @@ func GetRecentApprovedHosts(db *sql.DB, limit int) ([]Host, error) {
 // SearchHosts searches for hosts by name
 func SearchHosts(db *sql.DB, term string, limit int) ([]Host, error) {
 	query := `
-		SELECT DISTINCT h.id, h.name, hp.role, h.description, h.link, h.img, hp.podcast_id, p.title
+		SELECT DISTINCT h.id, h.name, hp.role, h.description, h.link, h.img, hp.podcast_id, p.title, COALESCE(p.feed_url, '') as feed_url
 		FROM hosts h
 		JOIN host_podcasts hp ON h.id = hp.host_id
 		JOIN podcasts p ON p.id = hp.podcast_id
 		WHERE hp.status = 'approved'
-		AND h.name LIKE ?
+		AND h.name_normalized LIKE ?
 		ORDER BY h.name
 		LIMIT ?`
 
-	searchTerm := "%" + term + "%"
+	// Match on the normalized name so search is case/accent/punctuation-insensitive.
+	searchTerm := "%" + NormalizeName(term) + "%"
 	rows, err := db.Query(query, searchTerm, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var hosts []Host
-	hostMap := make(map[int]*Host) // Use a map to avoid duplicates
+	// Aggregate every podcast row onto its host. We track the host order separately and build
+	// the result from the map at the end so that a host with multiple podcasts keeps ALL of
+	// them (appending to a value already copied into the slice would silently drop the rest).
+	hostMap := make(map[int]*Host)
+	var order []int
 
 	for rows.Next() {
-		var h Host
-		var role string
+		var hostID int
+		var name, role, description, link, img, podcastTitle, feedURL string
 		var podcastID int
-		var podcastTitle string
 
 		err := rows.Scan(
-			&h.ID,
-			&h.Name,
+			&hostID,
+			&name,
 			&role,
-			&h.Description,
-			&h.Link,
-			&h.Img,
+			&description,
+			&link,
+			&img,
 			&podcastID,
 			&podcastTitle,
+			&feedURL,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		// Check if we've already added this host
-		if existingHost, ok := hostMap[h.ID]; ok {
-			// Add this podcast to the existing host
-			existingHost.Podcasts = append(existingHost.Podcasts, PodcastAssociation{
-				PodcastID: podcastID,
-				Title:     podcastTitle,
-				Role:      role,
-				Status:    "approved",
-			})
-		} else {
-			// This is a new host
-			h.Podcasts = []PodcastAssociation{{
-				PodcastID: podcastID,
-				Title:     podcastTitle,
-				Role:      role,
-				Status:    "approved",
-			}}
-			hostMap[h.ID] = &h
-			hosts = append(hosts, h)
+		assoc := PodcastAssociation{
+			PodcastID: podcastID,
+			Title:     podcastTitle,
+			Role:      role,
+			Status:    "approved",
+			FeedURL:   feedURL,
 		}
+
+		if existingHost, ok := hostMap[hostID]; ok {
+			existingHost.Podcasts = append(existingHost.Podcasts, assoc)
+		} else {
+			hostMap[hostID] = &Host{
+				ID:          hostID,
+				Name:        name,
+				Description: description,
+				Link:        link,
+				Img:         img,
+				Podcasts:    []PodcastAssociation{assoc},
+			}
+			order = append(order, hostID)
+		}
+	}
+
+	hosts := make([]Host, 0, len(order))
+	for _, id := range order {
+		hosts = append(hosts, *hostMap[id])
 	}
 
 	return hosts, nil

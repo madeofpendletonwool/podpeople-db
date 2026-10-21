@@ -615,18 +615,20 @@ func (s *Server) ImportDatasetHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Import hosts
 	for _, host := range dataset.Hosts {
-		// Check if a host with this name already exists.
+		// Check if a host already exists, matching on the normalized name so imports dedup
+		// against case/accent/punctuation variants of the same person.
+		nameNormalized := models.NormalizeName(host.Name)
 		var existingID int
-		err := db.DB.QueryRow(`SELECT id FROM hosts WHERE name = ?`, host.Name).Scan(&existingID)
+		err := db.DB.QueryRow(`SELECT id FROM hosts WHERE name_normalized = ?`, nameNormalized).Scan(&existingID)
 		if err == nil {
 			hostIDMap[host.ID] = existingID
 			recordsImported++
 			continue
 		}
 		result, err := db.DB.Exec(`
-			INSERT INTO hosts (name, description, link, img)
-			VALUES (?, ?, ?, ?)`,
-			host.Name, host.Description, host.Link, host.Img)
+			INSERT INTO hosts (name, name_normalized, description, link, img)
+			VALUES (?, ?, ?, ?, ?)`,
+			host.Name, nameNormalized, host.Description, host.Link, host.Img)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Failed to import host %s: %v", host.Name, err))
 			continue

@@ -17,6 +17,12 @@ func applyMigrations() error {
 		return err
 	}
 
+	// Apply additive schema changes to existing databases (idempotent)
+	err = alterTables()
+	if err != nil {
+		return err
+	}
+
 	// Create indexes
 	err = createIndexes()
 	if err != nil {
@@ -157,6 +163,96 @@ func createTables() error {
 	return nil
 }
 
+// addColumnIfNotExists adds a column to a table, ignoring the error if it already exists.
+// SQLite has no "ADD COLUMN IF NOT EXISTS", so we check pragma table_info first.
+func addColumnIfNotExists(table, column, definition string) error {
+	rows, err := DB.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dfltValue interface{}
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return nil // already exists
+		}
+	}
+
+	_, err = DB.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition)
+	return err
+}
+
+// alterTables applies additive schema changes to databases created before these columns existed.
+// All operations are idempotent so it is safe to run on every startup.
+func alterTables() error {
+	// A1: normalized host name for dedup/search.
+	if err := addColumnIfNotExists("hosts", "name_normalized", "TEXT"); err != nil {
+		return err
+	}
+
+	// B5: updated_at for delta sync on the core relational tables (all already have created_at).
+	for _, table := range []string{"hosts", "host_podcasts", "episodes", "episode_guests"} {
+		if err := addColumnIfNotExists(table, "updated_at", "DATETIME"); err != nil {
+			return err
+		}
+	}
+
+	// Backfill name_normalized for existing hosts. NormalizeName is computed in Go (accent folding
+	// isn't available in SQLite), so pull names with an empty/NULL normalized column and set them.
+	rows, err := DB.Query("SELECT id, name FROM hosts WHERE name_normalized IS NULL OR name_normalized = ''")
+	if err != nil {
+		return err
+	}
+	type hostRow struct {
+		id   int
+		name string
+	}
+	var toBackfill []hostRow
+	for rows.Next() {
+		var hr hostRow
+		if err := rows.Scan(&hr.id, &hr.name); err != nil {
+			rows.Close()
+			return err
+		}
+		toBackfill = append(toBackfill, hr)
+	}
+	rows.Close()
+	for _, hr := range toBackfill {
+		if _, err := DB.Exec("UPDATE hosts SET name_normalized = ? WHERE id = ?",
+			models.NormalizeName(hr.name), hr.id); err != nil {
+			return err
+		}
+	}
+
+	// B5: AFTER UPDATE triggers keep updated_at current. SQLite recursive_triggers is OFF by
+	// default, so the trigger's own UPDATE does not re-fire it. New inserts leave updated_at NULL;
+	// the /api/changes query uses COALESCE(updated_at, created_at).
+	for _, table := range []string{"hosts", "host_podcasts", "episodes", "episode_guests"} {
+		var keyCol string
+		switch table {
+		case "host_podcasts":
+			keyCol = "rowid"
+		default:
+			keyCol = "id"
+		}
+		trig := "CREATE TRIGGER IF NOT EXISTS trg_" + table + "_updated_at " +
+			"AFTER UPDATE ON " + table + " BEGIN " +
+			"UPDATE " + table + " SET updated_at = CURRENT_TIMESTAMP WHERE " + keyCol + " = NEW." + keyCol + "; END;"
+		if _, err := DB.Exec(trig); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // createIndexes creates indexes on the tables
 func createIndexes() error {
 	_, err := DB.Exec(`
@@ -165,6 +261,7 @@ func createIndexes() error {
 		CREATE INDEX IF NOT EXISTS idx_host_podcasts_podcast_id ON host_podcasts(podcast_id);
 		CREATE INDEX IF NOT EXISTS idx_host_podcasts_status ON host_podcasts(status);
 		CREATE INDEX IF NOT EXISTS idx_hosts_name ON hosts(name);
+		CREATE INDEX IF NOT EXISTS idx_hosts_name_normalized ON hosts(name_normalized);
 		
 		-- Episode indexes
 		CREATE INDEX IF NOT EXISTS idx_episodes_podcast_id ON episodes(podcast_id);

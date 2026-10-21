@@ -29,6 +29,36 @@ func NewPodcastService(cfg *config.Config) *PodcastService {
 	}
 }
 
+// GetPodcastFeedURL resolves a podcast's RSS feed URL from its Podcast Index ID via the search
+// API. Lightweight counterpart to GetPodcastDetails (which additionally downloads and parses the
+// whole feed) — used to backfill feed URLs that aren't persisted in our podcasts table.
+func (s *PodcastService) GetPodcastFeedURL(id string) (string, error) {
+	if s.Config.PodcastAPI.SearchAPIURL == "" {
+		return "", fmt.Errorf("SEARCH_API_URL is not configured")
+	}
+
+	url := fmt.Sprintf("%s/api/podcast?id=%s", s.Config.PodcastAPI.SearchAPIURL, id)
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("error making request to API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response body: %w", err)
+	}
+
+	var result struct {
+		Feed models.Podcast `json:"feed"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("error unmarshalling JSON: %w", err)
+	}
+
+	return result.Feed.FeedURL, nil
+}
+
 // GetPodcastDetails fetches podcast details from the podcast index
 func (s *PodcastService) GetPodcastDetails(id string) (models.Podcast, error) {
 	if s.Config.PodcastAPI.SearchAPIURL == "" {

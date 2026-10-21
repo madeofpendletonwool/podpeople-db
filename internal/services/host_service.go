@@ -37,9 +37,11 @@ func (s *HostService) SubmitHost(host models.Host, podcastID int, role string) (
 			host.Img = "" // Clear invalid image URL
 		}
 
-		// Check if host exists
+		// Check if host exists — match on the normalized name so "Griffin McElroy",
+		// "Griffin Mcelroy" and "griffin  mcelroy" resolve to the same canonical host.
+		nameNormalized := models.NormalizeName(host.Name)
 		var hostID int
-		err := tx.QueryRow("SELECT id FROM hosts WHERE name = ?", host.Name).Scan(&hostID)
+		err := tx.QueryRow("SELECT id FROM hosts WHERE name_normalized = ?", nameNormalized).Scan(&hostID)
 		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("error checking for existing host: %w", err)
 		}
@@ -47,9 +49,9 @@ func (s *HostService) SubmitHost(host models.Host, podcastID int, role string) (
 		if err == sql.ErrNoRows {
 			// Host doesn't exist, create a new one
 			result, err := tx.Exec(`
-				INSERT INTO hosts (name, description, link, img)
-				VALUES (?, ?, ?, ?)`,
-				host.Name, host.Description, host.Link, host.Img)
+				INSERT INTO hosts (name, name_normalized, description, link, img)
+				VALUES (?, ?, ?, ?, ?)`,
+				host.Name, nameNormalized, host.Description, host.Link, host.Img)
 			if err != nil {
 				return fmt.Errorf("error creating host: %w", err)
 			}
@@ -64,13 +66,17 @@ func (s *HostService) SubmitHost(host models.Host, podcastID int, role string) (
 		// Set the result ID to be returned
 		resultHostID = hostID
 
-		// Insert or update the podcast
+		// Insert or update the podcast. Persist feed_url when the caller supplied it so the DB is
+		// self-sufficient (avoids re-resolving feed URLs from the index on every host-search).
+		// COALESCE keeps any existing non-empty feed_url if this submission didn't carry one.
+		feedURL := host.Podcasts[0].FeedURL
 		_, err = tx.Exec(`
-			INSERT INTO podcasts (id, title)
-			VALUES (?, ?)
+			INSERT INTO podcasts (id, title, feed_url)
+			VALUES (?, ?, NULLIF(?, ''))
 			ON CONFLICT (id) DO UPDATE SET
-			title = excluded.title`,
-			podcastID, host.Podcasts[0].Title)
+			title = excluded.title,
+			feed_url = COALESCE(NULLIF(excluded.feed_url, ''), podcasts.feed_url)`,
+			podcastID, host.Podcasts[0].Title, feedURL)
 		if err != nil {
 			return fmt.Errorf("error upserting podcast: %w", err)
 		}
@@ -437,4 +443,214 @@ func (s *HostService) ExportPublicDataset() (*models.PublicDataset, error) {
 	}
 
 	return dataset, nil
+}
+
+// GetChangesSince returns approved records changed since `since`, for incremental (delta) sync.
+// Change time is COALESCE(updated_at, created_at) so newly-inserted rows (updated_at NULL) are
+// caught by their created_at. Podcasts are reference data resolved on demand, so not included.
+func (s *HostService) GetChangesSince(since time.Time) (*models.PublicDataset, error) {
+	dataset := &models.PublicDataset{
+		ExportDate: time.Now(),
+		Version:    "delta-1",
+	}
+
+	hostRows, err := s.db.Query(`
+		SELECT id, name, COALESCE(description, ''), COALESCE(link, ''), COALESCE(img, ''), created_at
+		FROM hosts
+		WHERE COALESCE(updated_at, created_at) > ?
+		ORDER BY id`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer hostRows.Close()
+	for hostRows.Next() {
+		var h models.Host
+		if err := hostRows.Scan(&h.ID, &h.Name, &h.Description, &h.Link, &h.Img, &h.CreatedAt); err != nil {
+			return nil, err
+		}
+		dataset.Hosts = append(dataset.Hosts, h)
+	}
+
+	hpRows, err := s.db.Query(`
+		SELECT host_id, podcast_id, role, status, created_at
+		FROM host_podcasts
+		WHERE COALESCE(updated_at, created_at) > ?
+		ORDER BY host_id, podcast_id`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer hpRows.Close()
+	for hpRows.Next() {
+		var hp models.HostPodcast
+		if err := hpRows.Scan(&hp.HostID, &hp.PodcastID, &hp.Role, &hp.Status, &hp.CreatedAt); err != nil {
+			return nil, err
+		}
+		dataset.HostPodcasts = append(dataset.HostPodcasts, hp)
+	}
+
+	epRows, err := s.db.Query(`
+		SELECT id, podcast_id, title, COALESCE(description, ''), audio_url, pub_date,
+		       COALESCE(duration, 0), season_number, episode_number, COALESCE(image_url, ''),
+		       COALESCE(link, ''), COALESCE(guid, ''), status, created_at
+		FROM episodes
+		WHERE COALESCE(updated_at, created_at) > ?
+		ORDER BY id`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer epRows.Close()
+	for epRows.Next() {
+		var e models.Episode
+		if err := epRows.Scan(&e.ID, &e.PodcastID, &e.Title, &e.Description, &e.AudioURL, &e.PubDate,
+			&e.Duration, &e.SeasonNumber, &e.EpisodeNumber, &e.ImageURL, &e.Link, &e.GUID,
+			&e.Status, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		dataset.Episodes = append(dataset.Episodes, e)
+	}
+
+	egRows, err := s.db.Query(`
+		SELECT id, episode_id, host_id, role, status, created_at
+		FROM episode_guests
+		WHERE COALESCE(updated_at, created_at) > ?
+		ORDER BY id`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer egRows.Close()
+	for egRows.Next() {
+		var eg models.EpisodeGuest
+		if err := egRows.Scan(&eg.ID, &eg.EpisodeID, &eg.HostID, &eg.Role, &eg.Status, &eg.CreatedAt); err != nil {
+			return nil, err
+		}
+		dataset.EpisodeGuests = append(dataset.EpisodeGuests, eg)
+	}
+
+	return dataset, nil
+}
+
+// GetTopHosts returns hosts ranked by how many approved podcasts they appear in — for the
+// discovery/browse grid.
+func (s *HostService) GetTopHosts(limit int) ([]models.HostRanked, error) {
+	rows, err := s.db.Query(`
+		SELECT h.id, h.name, COALESCE(h.img, ''), COUNT(hp.podcast_id) AS podcast_count
+		FROM hosts h
+		JOIN host_podcasts hp ON h.id = hp.host_id
+		WHERE hp.status = 'approved'
+		GROUP BY h.id
+		ORDER BY podcast_count DESC, h.name
+		LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hosts []models.HostRanked
+	for rows.Next() {
+		var h models.HostRanked
+		if err := rows.Scan(&h.ID, &h.Name, &h.Img, &h.PodcastCount); err != nil {
+			return nil, err
+		}
+		hosts = append(hosts, h)
+	}
+	return hosts, nil
+}
+
+// GetDuplicateHostGroups returns groups of hosts that share a normalized name (dedup candidates
+// for the admin merge tool).
+func (s *HostService) GetDuplicateHostGroups() ([]models.DuplicateHostGroup, error) {
+	rows, err := s.db.Query(`
+		SELECT h.id, h.name, COALESCE(h.img, ''), h.name_normalized
+		FROM hosts h
+		WHERE h.name_normalized IN (
+			SELECT name_normalized FROM hosts
+			WHERE name_normalized IS NOT NULL AND name_normalized != ''
+			GROUP BY name_normalized HAVING COUNT(*) > 1
+		)
+		ORDER BY h.name_normalized, h.id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	groupsByKey := make(map[string]*models.DuplicateHostGroup)
+	var order []string
+	for rows.Next() {
+		var id int
+		var name, img, norm string
+		if err := rows.Scan(&id, &name, &img, &norm); err != nil {
+			return nil, err
+		}
+		g, ok := groupsByKey[norm]
+		if !ok {
+			g = &models.DuplicateHostGroup{NameNormalized: norm}
+			groupsByKey[norm] = g
+			order = append(order, norm)
+		}
+		g.Hosts = append(g.Hosts, models.HostRanked{ID: id, Name: name, Img: img})
+	}
+
+	groups := make([]models.DuplicateHostGroup, 0, len(order))
+	for _, k := range order {
+		groups = append(groups, *groupsByKey[k])
+	}
+	return groups, nil
+}
+
+// MergeHosts folds duplicateID into canonicalID: repoints host_podcasts and episode_guests, then
+// deletes the duplicate host. Association rows that would collide with an existing one on the
+// canonical host are dropped (the canonical row wins).
+func (s *HostService) MergeHosts(canonicalID, duplicateID int) error {
+	if canonicalID == duplicateID {
+		return fmt.Errorf("canonical and duplicate host IDs must differ")
+	}
+
+	return db.Transaction(func(tx *sql.Tx) error {
+		// Ensure both hosts exist.
+		var canonName string
+		if err := tx.QueryRow("SELECT name FROM hosts WHERE id = ?", canonicalID).Scan(&canonName); err != nil {
+			return fmt.Errorf("canonical host %d not found: %w", canonicalID, err)
+		}
+		var dupName string
+		if err := tx.QueryRow("SELECT name FROM hosts WHERE id = ?", duplicateID).Scan(&dupName); err != nil {
+			return fmt.Errorf("duplicate host %d not found: %w", duplicateID, err)
+		}
+
+		// Repoint host_podcasts, skipping pairs the canonical host already has (UNIQUE host_id,podcast_id).
+		if _, err := tx.Exec(`
+			UPDATE host_podcasts SET host_id = ?
+			WHERE host_id = ?
+			AND podcast_id NOT IN (SELECT podcast_id FROM host_podcasts WHERE host_id = ?)`,
+			canonicalID, duplicateID, canonicalID); err != nil {
+			return fmt.Errorf("error repointing host_podcasts: %w", err)
+		}
+		if _, err := tx.Exec("DELETE FROM host_podcasts WHERE host_id = ?", duplicateID); err != nil {
+			return fmt.Errorf("error cleaning up duplicate host_podcasts: %w", err)
+		}
+
+		// Repoint episode_guests, skipping episodes the canonical host already guests on
+		// (UNIQUE episode_id,host_id).
+		if _, err := tx.Exec(`
+			UPDATE episode_guests SET host_id = ?
+			WHERE host_id = ?
+			AND episode_id NOT IN (SELECT episode_id FROM episode_guests WHERE host_id = ?)`,
+			canonicalID, duplicateID, canonicalID); err != nil {
+			return fmt.Errorf("error repointing episode_guests: %w", err)
+		}
+		if _, err := tx.Exec("DELETE FROM episode_guests WHERE host_id = ?", duplicateID); err != nil {
+			return fmt.Errorf("error cleaning up duplicate episode_guests: %w", err)
+		}
+
+		// Touch canonical host so the merge propagates via delta sync.
+		if _, err := tx.Exec("UPDATE hosts SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", canonicalID); err != nil {
+			return fmt.Errorf("error touching canonical host: %w", err)
+		}
+
+		// Remove the now-orphaned duplicate host.
+		if _, err := tx.Exec("DELETE FROM hosts WHERE id = ?", duplicateID); err != nil {
+			return fmt.Errorf("error deleting duplicate host: %w", err)
+		}
+
+		return nil
+	})
 }

@@ -45,6 +45,7 @@ type PodcastAssociation struct {
 	Title     string `json:"podcastTitle"`
 	Role      string `json:"role"`
 	Status    string `json:"status"`
+	FeedURL   string `json:"feedUrl"`
 }
 
 // Admin represents an administrator user
@@ -95,6 +96,20 @@ type EpisodeGuest struct {
 	ApprovalKey          string    `json:"approval_key,omitempty"`
 	ApprovalKeyExpiresAt time.Time `json:"approval_key_expires_at,omitempty"`
 	CreatedAt            time.Time `json:"created_at"`
+}
+
+// HostRanked is a lightweight host view for discovery/browse grids and dedup listings.
+type HostRanked struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Img          string `json:"img"`
+	PodcastCount int    `json:"podcastCount"`
+}
+
+// DuplicateHostGroup is a set of hosts sharing a normalized name (admin merge candidates).
+type DuplicateHostGroup struct {
+	NameNormalized string       `json:"nameNormalized"`
+	Hosts          []HostRanked `json:"hosts"`
 }
 
 // PodcastSummary represents a summary of a podcast

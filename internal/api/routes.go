@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -14,8 +15,12 @@ func (s *Server) registerRoutes() {
 	s.Router.Get("/podcast/{id}", s.PodcastHandler)
 	s.Router.Get("/podcast/", s.PodcastHandler) // For query param version
 	s.Router.Get("/episode/{podcastId}/{audioUrl}", s.EpisodeHandler)
-	s.Router.Post("/add-host", s.AddHostHandler)
-	s.Router.Post("/add-episode-guest", s.AddEpisodeGuestHandler)
+	// Public submission endpoints are unauthenticated, so rate-limit them per IP to deter abuse.
+	s.Router.Group(func(r chi.Router) {
+		r.Use(rateLimitMiddleware(10, time.Minute))
+		r.Post("/add-host", s.AddHostHandler)
+		r.Post("/add-episode-guest", s.AddEpisodeGuestHandler)
+	})
 	s.Router.Get("/search-hosts", s.SearchHostsHandler)
 	s.Router.Get("/get-host-details", s.GetHostDetailsHandler)
 	s.Router.Get("/proxy-image", s.ProxyImageHandler)
@@ -49,6 +54,8 @@ func (s *Server) registerRoutes() {
 			r.Post("/import-dataset", s.ImportDatasetHandler)
 			r.Post("/import-database", s.ImportDatabaseHandler)
 			r.Get("/export-full-database", s.AdminExportFullDatabaseHandler)
+			r.Get("/duplicate-hosts", s.DuplicateHostsAPIHandler)
+			r.Post("/merge-hosts", s.MergeHostsHandler)
 		})
 
 		// Auto-approve route (special case, uses approval key)
@@ -60,12 +67,22 @@ func (s *Server) registerRoutes() {
 		r.Get("/podcast/{id}", s.GetPodcastAPI)
 		r.Get("/podcast/{id}/episodes", s.GetEpisodesHandler)
 		r.Get("/hosts/{id}", s.GetHostsAPI)
+		r.Get("/host-search", s.HostSearchAPIHandler)
 		r.Get("/download-database", s.DownloadDatabaseHandler)
 		r.Get("/public-dataset", s.PublicDatasetExportHandler)
 		r.Get("/recent-hosts", s.GetRecentHostsHandler)
 		r.Get("/search-podcasts", s.SearchPodcastsHandler)
 		r.Get("/stats", s.GetStatsHandler)
 		r.Get("/popular-podcasts", s.GetPopularPodcastsHandler)
+
+		// JSON discovery endpoints (consumed by integrations like PinePods)
+		r.Get("/discover/recent-hosts", s.RecentHostsAPIHandler)
+		r.Get("/discover/popular-podcasts", s.PopularPodcastsAPIHandler)
+		r.Get("/discover/top-hosts", s.TopHostsAPIHandler)
+		r.Get("/discover/stats", s.StatsAPIHandler)
+
+		// Incremental dataset sync
+		r.Get("/changes", s.ChangesAPIHandler)
 	})
 
 	// Documentation routes

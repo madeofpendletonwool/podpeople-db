@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -229,6 +230,7 @@ func (s *Server) AddHostHandler(w http.ResponseWriter, r *http.Request) {
 			Title:     podcast.Title,
 			Role:      r.Form.Get("role"),
 			Status:    "pending",
+			FeedURL:   podcast.FeedURL,
 		}},
 	}
 
@@ -404,6 +406,72 @@ func (s *Server) SearchHostsHandler(w http.ResponseWriter, r *http.Request) {
 	if err := s.TemplateManager.Render(w, "host-suggestions", hosts); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// HostSearchAPIHandler is the JSON counterpart of SearchHostsHandler: it looks up hosts by name
+// and returns them (with every associated podcast, including each podcast's feed URL) as JSON, so
+// integrations like PinePods can resolve "host name -> podcasts" in a single call.
+func (s *Server) HostSearchAPIHandler(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	w.Header().Set("Content-Type", "application/json")
+
+	if len(name) < 3 {
+		// Match SearchHostsHandler's minimum term length; return an empty array, not an error.
+		json.NewEncoder(w).Encode([]models.Host{})
+		return
+	}
+
+	hosts, err := s.HostService.SearchHosts(name, 10)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Our podcasts table stores podcasts by Podcast Index ID but does not persist feed URLs, so
+	// backfill any missing feedUrl from the index (deduped by podcast id, resolved concurrently).
+	// Integrations like PinePods need the feed URL to fetch a host's episodes.
+	feedURLCache := make(map[int]string)
+	var missing []int
+	for _, host := range hosts {
+		for _, p := range host.Podcasts {
+			if p.FeedURL == "" {
+				if _, seen := feedURLCache[p.PodcastID]; !seen {
+					feedURLCache[p.PodcastID] = ""
+					missing = append(missing, p.PodcastID)
+				}
+			}
+		}
+	}
+
+	if len(missing) > 0 {
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		for _, pid := range missing {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				feedURL, err := s.PodcastService.GetPodcastFeedURL(strconv.Itoa(id))
+				if err != nil {
+					log.Printf("host-search: failed to resolve feed URL for podcast %d: %v", id, err)
+					return
+				}
+				mu.Lock()
+				feedURLCache[id] = feedURL
+				mu.Unlock()
+			}(pid)
+		}
+		wg.Wait()
+
+		for hi := range hosts {
+			for pi := range hosts[hi].Podcasts {
+				if hosts[hi].Podcasts[pi].FeedURL == "" {
+					hosts[hi].Podcasts[pi].FeedURL = feedURLCache[hosts[hi].Podcasts[pi].PodcastID]
+				}
+			}
+		}
+	}
+
+	json.NewEncoder(w).Encode(hosts)
 }
 
 // GetHostDetailsHandler handles getting host details
