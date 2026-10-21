@@ -1,117 +1,89 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>PodPeopleDB</title>
-    <link rel="icon" type="image/x-icon" href="/static/podpeople.ico">
-    <link rel="stylesheet" href="/static/styles.css?v=1.1">
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
-</head>
-<body>
-    <div class="container">
-        <img src="/static/podpeople.png" alt="PodPeopleDB Logo" class="logo">
-        <h1>Welcome to PodPeopleDB</h1>
-        <p class="subtitle">The open platform for podcast host and guest data</p>
-        
-        <!-- Podcast Search -->
-        <div class="search-section">
-            <h2>Find Podcasts</h2>
-            <div class="search-options">
-                <div class="search-option">
-                    <label>Search by Name</label>
-                    <form action="/search" method="GET">
-                        <input type="text" name="q" placeholder="Try &quot;Code&quot; or &quot;Tech&quot;..." autocomplete="off" required>
-                        <button type="submit">Search</button>
-                    </form>
-                    <small style="color: #888; font-size: 0.8rem;">Find podcasts by name and discover their hosts</small>
-                </div>
-                <div class="search-option">
-                    <label>Search by ID</label>
-                    <form hx-get="/podcast/" hx-target="body" hx-push-url="true">
-                        <input type="text" name="id" placeholder="e.g. 920666" required>
-                        <button type="submit">Go to Podcast</button>
-                    </form>
-                    <small style="color: #888; font-size: 0.8rem;">Have a specific Podcast Index ID? Jump right to it</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Action Buttons Section -->
-        <div class="action-buttons-section">
-            <div class="action-buttons-grid">
-                <a href="/docs/what-is-this-for" class="action-button docs-btn">
-                    <i class="ph ph-question button-icon"></i>
-                    <div class="button-content">
-                        <h3>Documentation</h3>
-                        <p>Learn how PodPeopleDB works</p>
-                    </div>
-                </a>
-                
-                <a href="/api/public-dataset" class="action-button download-btn">
-                    <i class="ph ph-download button-icon"></i>
-                    <div class="button-content">
-                        <h3>Download Dataset</h3>
-                        <p>Get the public host/guest data</p>
-                    </div>
-                </a>
-                
-                <a href="/admin/login" class="action-button admin-btn">
-                    <i class="ph ph-gear button-icon"></i>
-                    <div class="button-content">
-                        <h3>Admin Portal</h3>
-                        <p>Manage hosts and users</p>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Stats Section -->
-        <div class="stats-section">
-            <h2>PodPeopleDB Stats</h2>
-            <div class="stats-grid" hx-get="/api/stats" hx-trigger="load once">
-                <!-- HTMX will load the stats here -->
-            </div>
-        </div>
-
-        <div class="recent-hosts-section">
-            <h2>Recently Added Hosts</h2>
-            <p class="section-subtitle">New faces in the podcast world - click to explore their shows!</p>
-            <div class="recent-hosts-grid" hx-get="/api/recent-hosts" hx-trigger="load once">
-                <!-- HTMX will load the recent hosts here -->
-            </div>
-        </div>
-
-        <!-- Featured Podcasts Section -->
-        <div class="featured-section">
-            <h2>Popular Podcasts</h2>
-            <p class="section-subtitle">Shows with the most host data - the community favorites!</p>
-            <div class="featured-grid" hx-get="/api/popular-podcasts" hx-trigger="load once">
-                <!-- HTMX will load popular podcasts here -->
-            </div>
-        </div>
-
-        <footer class="footer">
-            <div class="footer-content">
-                <div class="footer-main">
-                    <p>PodPeopleDB is open source</p>
-                    <a href="https://github.com/madeofpendletonwool/podpeople-db" class="github-link">
-                        <svg height="32" aria-hidden="true" viewBox="0 0 16 16" version="1.1" width="32" data-view-component="true" class="github-logo">
-                            <path fill="white" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
-                        </svg>
-                        View Source
-                    </a>
-                </div>
-                <p class="footer-description">
-                    PodPeopleDB is like IMDB for podcasts - discover hosts, guests, and the shows they're on. 
-                    Community-powered and completely open source! 
-                    <a href="/docs/what-is-this-for">Learn more about our mission.</a>
-                </p>
-            </div>
-        </footer>
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+<section class="hero">
+  <div class="wrap">
+    <h1>Who's on <em>that</em> podcast?</h1>
+    <p class="lede">PodPeopleDB is the open, community-built database of podcast hosts and guests. Look someone up, follow them across shows, or add the people missing from a show you love.</p>
+    <form action="/search" method="get" role="search" class="search-wrap">
+      <div class="search lg" data-typeahead>
+        <svg><use href="#i-search"/></svg>
+        <input type="search" name="q" placeholder="Search a person or a podcast" autocomplete="off" aria-label="Search people and podcasts" autofocus>
+      </div>
+    </form>
+    <p class="examples">Try {% for p in top.iter().take(3) %}<a href="{{ crate::web::h::person_url(p.person.id, p.person.slug) }}">{{ p.person.name }}</a>{% if !loop.last %}, {% endif %}{% endfor %}{% if top.is_empty() %}searching for a show you listen to{% endif %}</p>
+    <div class="stats">
+      <div class="stat"><b>{{ crate::web::h::num(stats.people) }}</b><span>people</span></div>
+      <div class="stat"><b>{{ crate::web::h::num(stats.podcasts_with_people) }}</b><span>podcasts with people</span></div>
+      <div class="stat"><b>{{ crate::web::h::num(stats.episode_credits) }}</b><span>episode appearances</span></div>
     </div>
-</body>
-</html>
+  </div>
+</section>
+
+<div class="wrap">
+  {% if !top.is_empty() %}
+  <section class="section">
+    <div class="section-head"><h2>People across the most shows</h2><span class="spacer"></span><a href="/discover">See more</a></div>
+    <div class="people-grid">
+      {% for p in top %}
+      <a class="person-tile" href="{{ crate::web::h::person_url(p.person.id, p.person.slug) }}">
+        {% call m::avatar(p.person.name, p.person.img, "lg") %}{% endcall %}
+        <span class="name">{{ p.person.name }}</span>
+        <span class="sub clamp-2">{% if let Some(k) = p.known_for %}{{ k }}{% else %}{{ crate::web::h::plural(p.podcast_count, "podcast") }}{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="section">
+    <div class="card contribute">
+      <h2 style="margin-bottom: 6px">Missing someone? Add them in seconds.</h2>
+      <p class="muted">No account, no forms to fill. Find the show, type a name, done. Your addition shows up right away; we review it afterwards.</p>
+      <div class="steps" style="margin-top: 18px">
+        <div class="step"><h3>Find the show</h3><p>Search for it above. Anything in the Podcast Index works, and so do shows without a public feed.</p></div>
+        <div class="step"><h3>Type the names</h3><p>Paste "Alice, Bob and Carol" and you get three people. Pick existing people from the suggestions so nobody gets duplicated.</p></div>
+        <div class="step"><h3>That's it</h3><p>It's live for everyone, including every Pinepods server. Photos and bios can come later.</p></div>
+      </div>
+      <p style="margin: 18px 0 0"><a class="btn btn-primary" href="/contribute">How contributing works <svg><use href="#i-arrow"/></svg></a></p>
+    </div>
+  </section>
+
+  {% if !recent.is_empty() %}
+  <section class="section">
+    <div class="section-head"><h2>Recently added</h2></div>
+    <div class="people-grid">
+      {% for p in recent %}
+      <a class="person-tile" href="{{ crate::web::h::person_url(p.person.id, p.person.slug) }}">
+        {% call m::avatar(p.person.name, p.person.img, "lg") %}{% endcall %}
+        <span class="name">{{ p.person.name }}</span>
+        <span class="sub clamp-2">{% if let Some(k) = p.known_for %}{{ k }}{% endif %}</span>
+        {% if !p.person.verified %}<span class="badges"><span class="badge unverified">unverified</span></span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if !popular.is_empty() %}
+  <section class="section">
+    <div class="section-head"><h2>Shows with the most people</h2></div>
+    <div class="podcast-grid">
+      {% for p in popular %}
+      <a class="podcast-tile" href="/podcasts/{{ p.id }}">
+        {% call m::cover(p.image, "") %}{% endcall %}
+        <span class="grow"><span class="title clamp-2">{{ p.title }}</span><span class="sub">{{ crate::web::h::plural(p.people_count, "person") }}</span></span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="section">
+    <div class="card">
+      <div class="card-title"><h2>Built into Pinepods</h2></div>
+      <p class="muted" style="max-width: 70ch">Every <a href="https://www.pinepods.online">Pinepods</a> server shows these hosts and guests on podcast and episode pages, lets you follow a person across every show they appear on, and lets you add missing people without leaving the app. Other apps can use the same data through the <a href="/docs/api">open API</a> or a <a href="/api/public-dataset">full download</a>.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

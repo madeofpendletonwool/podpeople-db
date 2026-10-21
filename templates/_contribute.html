@@ -1,0 +1,37 @@
+<div class="card contribute" data-contribute data-podcast-id="{{ podcast.id }}">
+  <h3><svg><use href="#i-user-plus"/></svg>{% if people.is_empty() %}Who's on this show?{% else %}Someone missing?{% endif %}</h3>
+  <p class="muted small" style="margin-bottom: 10px">Type names and press Enter. Pasting “Alice, Bob and Carol” works too.</p>
+  <form data-contribute-form autocomplete="off">
+    <div class="chip-input" data-chips>
+      <input type="text" data-name-input placeholder="Add a name" aria-label="Person's name" maxlength="400">
+      <div class="suggest" hidden data-person-suggest></div>
+    </div>
+    <div class="contribute-row">
+      <select class="select" name="role" aria-label="Role">
+        <option value="host">Host</option>
+        <option value="co-host">Co-host</option>
+        <option value="guest">Guest</option>
+        <option value="producer">Producer</option>
+        <option value="editor">Editor</option>
+        <option value="announcer">Announcer</option>
+      </select>
+      <button class="btn btn-primary" type="submit" data-submit>Add</button>
+    </div>
+    <details class="more">
+      <summary>Add a photo or link (optional)</summary>
+      <div class="form-grid">
+        <div class="field"><label>Photo URL</label><input class="input" name="img" type="url" placeholder="https://…"></div>
+        <div class="field"><label>Website</label><input class="input" name="website" type="url" placeholder="https://…"></div>
+        <p class="hint" style="margin: 0">Applies when you add one person at a time.</p>
+      </div>
+    </details>
+    <input class="hp" name="homepage" tabindex="-1" autocomplete="off" aria-hidden="true">
+  </form>
+  {% if !suggestions.is_empty() %}
+  <div class="suggestions" data-suggestions>
+    <span class="label">From the feed:</span>
+    {% for s in suggestions %}<button class="sugg-btn" type="button" data-suggest-name="{{ s }}" title="Add {{ s }} as a host"><svg><use href="#i-plus"/></svg>{{ s }}</button>{% endfor %}
+  </div>
+  {% endif %}
+  <p class="faint small" style="margin: 12px 0 0">Additions go live right away and get reviewed later. <a href="/contribute">More about contributing</a></p>
+</div>

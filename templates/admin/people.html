@@ -1,0 +1,44 @@
+{% extends "admin/_shell.html" %}
+{% import "_macros.html" as m %}
+{% block admin %}
+<h1 style="font-size: 1.8rem">People</h1>
+<form class="row" method="get" action="/admin/people" style="margin-bottom: 20px">
+  <div class="search" style="flex: 1"><svg><use href="#i-search"/></svg><input type="search" name="q" value="{{ q }}" placeholder="Find a person"></div>
+  <button class="btn">Search</button>
+</form>
+{% if !results.is_empty() %}
+<div class="card flush" style="margin-bottom: 28px">
+  {% for p in results %}
+  <a class="person-row" href="/admin/people/{{ p.person.id }}">
+    {% call m::avatar(p.person.name, p.person.img, "sm") %}{% endcall %}
+    <span class="grow"><span class="name">{{ p.person.name }}</span> <span class="faint small">#{{ p.person.id }}</span><br><span class="faint small truncate">{{ p.known_for.as_deref().unwrap_or("") }}</span></span>
+    {% if !p.person.verified %}<span class="badge unverified">unverified</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% elif !q.is_empty() %}
+<p class="muted">Nobody matches “{{ q }}”.</p>
+{% endif %}
+
+<h2>Possible duplicates</h2>
+<p class="muted small">People sharing a normalized name. Merging moves every credit to the person you keep; the other id keeps resolving to them.</p>
+{% if duplicates.is_empty() %}
+<p class="faint">None found.</p>
+{% endif %}
+{% for g in duplicates %}
+<div class="card" style="margin-bottom: 12px">
+  <form method="post" action="/admin/people/merge" class="stack" style="--gap: 8px">
+    <input type="hidden" name="csrf" value="{{ l.csrf }}">
+    {% for p in g.people %}
+    <label class="person-row" style="cursor: pointer">
+      <input type="radio" name="keep" value="{{ p.person.id }}" {% if loop.first %}checked{% endif %}>
+      {% call m::avatar(p.person.name, p.person.img, "sm") %}{% endcall %}
+      <span class="grow"><span class="name">{{ p.person.name }}</span> <span class="faint small">#{{ p.person.id }} · {{ crate::web::h::plural(p.podcast_count, "podcast") }}</span><br><span class="faint small">{{ p.known_for.as_deref().unwrap_or("") }}</span></span>
+      <input type="hidden" name="ids" value="{{ p.person.id }}">
+    </label>
+    {% endfor %}
+    <div><button class="btn btn-sm">Merge into the selected person</button></div>
+  </form>
+</div>
+{% endfor %}
+{% endblock %}

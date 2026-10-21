@@ -1,0 +1,17 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="wrap admin-shell">
+  <nav class="admin-nav">
+    <a href="/admin" {% if tab == "queue" %}aria-current="page"{% endif %}>Review queue{% if l.queue > 0 %}<span class="count">{{ l.queue }}</span>{% endif %}</a>
+    <a href="/admin/people" {% if tab == "people" %}aria-current="page"{% endif %}>People</a>
+    <a href="/admin/podcasts" {% if tab == "podcasts" %}aria-current="page"{% endif %}>Podcasts</a>
+    <a href="/admin/data" {% if tab == "data" %}aria-current="page"{% endif %}>Data</a>
+    <a href="/admin/admins" {% if tab == "admins" %}aria-current="page"{% endif %}>Admins</a>
+    <a href="/admin/audit" {% if tab == "audit" %}aria-current="page"{% endif %}>Audit log</a>
+  </nav>
+  <div>
+    {% if let Some(f) = flash %}<noscript><div class="notice ok" style="margin-bottom: 16px"><span>{{ f }}</span></div></noscript>{% endif %}
+    {% block admin %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

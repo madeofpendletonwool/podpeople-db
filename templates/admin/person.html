@@ -1,0 +1,58 @@
+{% extends "admin/_shell.html" %}
+{% import "_macros.html" as m %}
+{% block admin %}
+<div class="row" style="margin-bottom: 16px">
+  {% call m::avatar(person.name, person.img, "lg") %}{% endcall %}
+  <div class="grow"><h1 style="font-size: 1.8rem; margin: 0">{{ person.name }}</h1><span class="faint small">#{{ person.id }} · added {{ crate::web::h::ago(person.created_at) }}</span></div>
+  <a class="btn btn-sm" href="{{ crate::web::h::person_url(person.id, person.slug) }}">Public page</a>
+</div>
+{% if hidden %}<div class="notice warn" style="margin-bottom: 16px"><svg><use href="#i-warn"/></svg><span>Hidden: this person doesn't appear anywhere public.</span></div>{% endif %}
+
+<div class="layout">
+  <div class="stack">
+    <form class="card form-grid" method="post" action="/admin/people/{{ person.id }}">
+      <input type="hidden" name="csrf" value="{{ l.csrf }}">
+      <div class="field"><label>Name</label><input class="input" name="name" value="{{ person.name }}" required></div>
+      <div class="field"><label>Photo URL</label><input class="input" name="img" type="url" value="{{ person.img.as_deref().unwrap_or("") }}"></div>
+      <div class="field"><label>Website</label><input class="input" name="website" type="url" value="{{ person.website.as_deref().unwrap_or("") }}"></div>
+      <div class="field"><label>Bio</label><textarea class="textarea" name="bio">{{ person.bio.as_deref().unwrap_or("") }}</textarea></div>
+      <label class="row small"><input type="checkbox" name="verified" value="1" {% if person.verified %}checked{% endif %}> Verified</label>
+      <div><button class="btn btn-primary">Save</button></div>
+    </form>
+
+    <div class="card flush">
+      <div style="padding: 16px 20px 0"><h3>Credits</h3></div>
+      <div class="table-wrap" style="border: 0; border-radius: 0">
+      <table>
+        <tr><th>Podcast / episode</th><th>Role</th><th>Source</th><th></th></tr>
+        {% for c in credits %}
+        <tr>
+          <td><a href="/podcasts/{{ c.podcast_id }}">{{ c.podcast_title }}</a>{% if let Some(t) = c.episode_title %}<br><span class="faint small">{{ t }}</span>{% endif %}</td>
+          <td>{{ c.role }}</td>
+          <td><span class="badge {% if c.source == "feed" %}feed{% elif c.verified %}verified{% else %}unverified{% endif %}">{{ c.source }}</span>{% if c.hidden %} <span class="badge reverted">hidden</span>{% endif %}</td>
+          <td class="nowrap">
+            {% if c.source == "community" %}
+            <form method="post" action="/admin/credits/{{ c.id }}/delete" style="display: inline"><input type="hidden" name="csrf" value="{{ l.csrf }}"><input type="hidden" name="back" value="/admin/people/{{ person.id }}"><button class="btn btn-sm btn-ghost btn-danger">Remove</button></form>
+            {% else %}<span class="faint small">from feed</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      </div>
+    </div>
+  </div>
+  <aside>
+    <div class="card stack" style="--gap: 10px">
+      <h3>Moderation</h3>
+      <form method="post" action="/admin/people/{{ person.id }}/{% if hidden %}unhide{% else %}hide{% endif %}"><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm" style="width: 100%">{% if hidden %}Unhide{% else %}Hide everywhere{% endif %}</button></form>
+      <form method="post" action="/admin/people/merge" class="row">
+        <input type="hidden" name="csrf" value="{{ l.csrf }}">
+        <input type="hidden" name="ids" value="{{ person.id }}">
+        <input class="input" name="keep" placeholder="Merge into id #" inputmode="numeric" required style="min-width: 0">
+        <button class="btn btn-sm">Merge</button>
+      </form>
+      <form method="post" action="/admin/people/{{ person.id }}/delete" data-confirm="Delete {{ person.name }} and all their credits? Feed credits come back on the next crawl."><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm btn-danger" style="width: 100%">Delete</button></form>
+    </div>
+  </aside>
+</div>
+{% endblock %}

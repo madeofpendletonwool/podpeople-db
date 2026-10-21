@@ -9,7 +9,7 @@ use crate::db::Db;
 use crate::error::AppResult;
 use crate::feed::ParsedFeed;
 use crate::index::IndexFeed;
-use crate::normalize::{normalize_name, split_names};
+use crate::normalize::{clean_url, normalize_name, split_names};
 
 pub async fn get(db: &Db, id: i64) -> AppResult<Option<Podcast>> {
     let sql = format!("SELECT {PODCAST_COLS} FROM podcasts WHERE id = ?");
@@ -59,8 +59,8 @@ pub async fn upsert_from_index(db: &Db, f: &IndexFeed) -> AppResult<i64> {
     .bind(nonempty(&f.description))
     .bind(nonempty(&f.author))
     .bind(nonempty(&f.owner_name))
-    .bind(f.image())
-    .bind(nonempty(&f.link))
+    .bind(clean_url(f.image().as_deref()))
+    .bind(clean_url(Some(&f.link)))
     .bind(crate::db::now())
     .fetch_one(db)
     .await?;
@@ -125,8 +125,8 @@ pub async fn ingest_feed(conn: &mut SqliteConnection, podcast_id: i64, feed: &Pa
     .bind(feed.description.as_deref().map(|d| d.chars().take(4000).collect::<String>()))
     .bind(&feed.author)
     .bind(&feed.owner_name)
-    .bind(&feed.image)
-    .bind(&feed.link)
+    .bind(clean_url(feed.image.as_deref()))
+    .bind(clean_url(feed.link.as_deref()))
     .bind(&feed.podcast_guid)
     .bind(feed.has_person_tags())
     .execute(&mut *conn)
@@ -162,7 +162,7 @@ pub async fn ingest_feed(conn: &mut SqliteConnection, podcast_id: i64, feed: &Pa
 
     let mut keep_credits = Vec::new();
     for person in &feed.people {
-        let pid = people::match_or_create_from_feed(conn, podcast_id, &person.name, person.img.as_deref(), person.href.as_deref()).await?;
+        let pid = people::match_or_create_from_feed(conn, podcast_id, &person.name, clean_url(person.img.as_deref()).as_deref(), clean_url(person.href.as_deref()).as_deref()).await?;
         let (cid, created) = credits::add(conn, &NewCredit {
             person_id: pid,
             podcast_id,
@@ -207,8 +207,8 @@ pub async fn ingest_feed(conn: &mut SqliteConnection, podcast_id: i64, feed: &Pa
                     .bind(&item.enclosure_url)
                     .bind(title)
                     .bind(&description)
-                    .bind(&item.link)
-                    .bind(&item.image)
+                    .bind(clean_url(item.link.as_deref()))
+                    .bind(clean_url(item.image.as_deref()))
                     .bind(&item.pub_date)
                     .bind(item.duration)
                     .bind(item.season)
@@ -233,8 +233,8 @@ pub async fn ingest_feed(conn: &mut SqliteConnection, podcast_id: i64, feed: &Pa
                 .bind(&item.enclosure_url)
                 .bind(title)
                 .bind(&description)
-                .bind(&item.link)
-                .bind(&item.image)
+                .bind(clean_url(item.link.as_deref()))
+                .bind(clean_url(item.image.as_deref()))
                 .bind(&item.pub_date)
                 .bind(item.duration)
                 .bind(item.season)
@@ -246,7 +246,7 @@ pub async fn ingest_feed(conn: &mut SqliteConnection, podcast_id: i64, feed: &Pa
             }
         };
         for person in &item.people {
-            let pid = people::match_or_create_from_feed(conn, podcast_id, &person.name, person.img.as_deref(), person.href.as_deref()).await?;
+            let pid = people::match_or_create_from_feed(conn, podcast_id, &person.name, clean_url(person.img.as_deref()).as_deref(), clean_url(person.href.as_deref()).as_deref()).await?;
             let (cid, created) = credits::add(conn, &NewCredit {
                 person_id: pid,
                 podcast_id,
@@ -342,7 +342,7 @@ pub async fn fill_from_index(db: &Db, id: i64, f: &IndexFeed) -> AppResult<()> {
     .bind(id)
     .bind(if taken { None } else { feed_url })
     .bind(nonempty(&f.title))
-    .bind(f.image())
+    .bind(clean_url(f.image().as_deref()))
     .bind(nonempty(&f.author))
     .bind(nonempty(&f.podcast_guid))
     .bind(crate::db::now())

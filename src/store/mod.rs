@@ -1,5 +1,6 @@
 //! Database access. Everything public-facing filters out `hidden` rows.
 
+pub mod admin;
 pub mod credits;
 pub mod people;
 pub mod podcasts;

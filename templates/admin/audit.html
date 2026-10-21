@@ -1,0 +1,23 @@
+{% extends "admin/_shell.html" %}
+{% block admin %}
+<h1 style="font-size: 1.8rem">Audit log</h1>
+<div class="table-wrap">
+<table>
+  <tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Detail</th></tr>
+  {% for e in entries %}
+  <tr>
+    <td class="small nowrap">{{ crate::web::h::ago(e.created_at) }}</td>
+    <td>{{ e.admin.as_deref().unwrap_or("—") }}</td>
+    <td>{{ e.action }}</td>
+    <td class="small">{{ e.target_type }}{% if let Some(id) = e.target_id %} #{{ id }}{% endif %}</td>
+    <td class="small">{{ e.detail.as_deref().unwrap_or("") }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{% if entries.is_empty() %}<p class="faint" style="margin-top: 12px">Nothing yet.</p>{% endif %}
+<nav class="pager">
+  {% if page > 1 %}<a class="btn btn-sm" href="?page={{ page - 1 }}">Newer</a>{% endif %}
+  {% if has_more %}<a class="btn btn-sm" href="?page={{ page + 1 }}">Older</a>{% endif %}
+</nav>
+{% endblock %}

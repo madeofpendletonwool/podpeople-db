@@ -1,0 +1,77 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+<div class="wrap">
+  <section class="entity">
+    {% if let Some(img) = episode.episode.image %}{% call m::cover(Some(img.clone()), "lg") %}{% endcall %}{% else %}{% call m::cover(podcast.image, "lg") %}{% endcall %}{% endif %}
+    <div class="grow">
+      <div class="byline"><a href="/podcasts/{{ podcast.id }}">{{ podcast.title }}</a></div>
+      <h1 style="font-size: clamp(1.6rem, 3.5vw, 2.4rem)">{{ episode.episode.title }}</h1>
+      <div class="muted small">{{ crate::web::h::date(episode.episode.pub_date) }}{% if let Some(d) = episode.episode.duration %} · {{ crate::web::h::duration(*d) }}{% endif %}</div>
+      {% if let Some(d) = episode.episode.description %}<p class="desc clamp-3" style="margin-top: 12px" data-expandable>{{ crate::web::h::plain(d, 1200) }}</p>{% endif %}
+      <div class="links">
+        {% if let Some(u) = episode.episode.enclosure_url %}<a class="btn btn-sm" href="{{ u }}" rel="nofollow noopener" target="_blank">Audio</a>{% endif %}
+        {% if let Some(u) = episode.episode.link %}<a class="btn btn-sm" href="{{ u }}" rel="nofollow noopener" target="_blank"><svg><use href="#i-globe"/></svg>Episode page</a>{% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <div>
+      <section class="section" style="padding-top: 20px">
+        <div class="section-head"><h2>On this episode</h2></div>
+        {% if episode.people.is_empty() %}
+        <div class="empty card" data-people-empty><svg><use href="#i-mic"/></svg><p style="margin: 0">Nobody's credited on this episode yet.</p></div>
+        {% endif %}
+        <div class="people-grid" data-people-grid {% if episode.people.is_empty() %}hidden{% endif %}>
+          {% for c in episode.people %}
+          <a class="person-tile" href="{{ crate::web::h::person_url(c.person.id, c.person.slug) }}">
+            {% call m::avatar(c.person.name, c.person.img, "lg") %}{% endcall %}
+            <span class="name">{{ c.person.name }}</span>
+            <span class="badges"><span class="badge role">{{ c.role }}</span>{% call m::trust(c.verified, c.source == "feed") %}{% endcall %}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% if !show_people.is_empty() %}
+      <section class="section" style="padding-top: 8px">
+        <div class="section-head"><h2>The show's regulars</h2></div>
+        <div class="people-grid">
+          {% for p in show_people %}
+          <a class="person-tile" href="{{ crate::web::h::person_url(p.person.id, p.person.slug) }}">
+            {% call m::avatar(p.person.name, p.person.img, "") %}{% endcall %}
+            <span class="name">{{ p.person.name }}</span>
+            <span class="badges">{% for r in p.roles.iter().take(1) %}<span class="badge role">{{ r }}</span>{% endfor %}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+    <aside>
+      <div class="card contribute" data-contribute data-podcast-id="{{ podcast.id }}" data-episode-id="{{ episode.episode.id }}">
+        <h3><svg><use href="#i-user-plus"/></svg>Who's on this episode?</h3>
+        <p class="muted small" style="margin-bottom: 10px">Guests, guest hosts, anyone. Type names and press Enter.</p>
+        <form data-contribute-form autocomplete="off">
+          <div class="chip-input" data-chips>
+            <input type="text" data-name-input placeholder="Add a name" aria-label="Person's name" maxlength="400">
+            <div class="suggest" hidden data-person-suggest></div>
+          </div>
+          <div class="contribute-row">
+            <select class="select" name="role" aria-label="Role">
+              <option value="guest">Guest</option>
+              <option value="host">Host</option>
+              <option value="co-host">Co-host</option>
+              <option value="guest host">Guest host</option>
+              <option value="producer">Producer</option>
+            </select>
+            <button class="btn btn-primary" type="submit" data-submit>Add</button>
+          </div>
+          <input class="hp" name="homepage" tabindex="-1" autocomplete="off" aria-hidden="true">
+        </form>
+        <p class="faint small" style="margin: 12px 0 0">Live right away, reviewed later.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

@@ -11,7 +11,7 @@ pub const USER_AGENT: &str = concat!("PodPeopleDB/", env!("CARGO_PKG_VERSION"), 
 
 /// Feeds bigger than this are refused. The largest real-world feeds are ~20MB.
 const MAX_FEED_BYTES: usize = 40 * 1024 * 1024;
-const MAX_IMAGE_BYTES: usize = 8 * 1024 * 1024;
+const MAX_IMAGE_BYTES: usize = 12 * 1024 * 1024;
 
 #[derive(Clone)]
 pub struct Http {

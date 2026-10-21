@@ -1,0 +1,46 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+<div class="wrap">
+  <section class="section">
+    <h1>Discover</h1>
+    <p class="muted">The people turning up on the most shows, the newest additions, and the shows with the biggest casts.</p>
+  </section>
+  <section class="section" style="padding-top: 0">
+    <div class="section-head"><h2>Across the most shows</h2></div>
+    <div class="people-grid">
+      {% for p in top %}
+      <a class="person-tile" href="{{ crate::web::h::person_url(p.person.id, p.person.slug) }}">
+        {% call m::avatar(p.person.name, p.person.img, "lg") %}{% endcall %}
+        <span class="name">{{ p.person.name }}</span>
+        <span class="sub">{{ crate::web::h::plural(p.podcast_count, "podcast") }}{% if p.episode_count > 0 %} · {{ crate::web::h::plural(p.episode_count, "episode") }}{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="section">
+    <div class="section-head"><h2>Recently added</h2></div>
+    <div class="people-grid">
+      {% for p in recent %}
+      <a class="person-tile" href="{{ crate::web::h::person_url(p.person.id, p.person.slug) }}">
+        {% call m::avatar(p.person.name, p.person.img, "") %}{% endcall %}
+        <span class="name">{{ p.person.name }}</span>
+        <span class="sub clamp-2">{% if let Some(k) = p.known_for %}{{ k }}{% endif %}</span>
+        <span class="sub">{{ crate::web::h::ago(p.created_at) }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="section">
+    <div class="section-head"><h2>Shows with the most people</h2></div>
+    <div class="podcast-grid">
+      {% for p in popular %}
+      <a class="podcast-tile" href="/podcasts/{{ p.id }}">
+        {% call m::cover(p.image, "") %}{% endcall %}
+        <span class="grow"><span class="title clamp-2">{{ p.title }}</span><span class="sub">{{ crate::web::h::plural(p.people_count, "person") }}</span></span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

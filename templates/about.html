@@ -1,0 +1,25 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="wrap docs-layout">
+  {% include "_docs_nav.html" %}
+  <article class="prose">
+    <h1>What this is</h1>
+    <p>PodPeopleDB answers a simple question podcast apps are oddly bad at: <strong>who's on this show, and where else do they turn up?</strong> Think of it as IMDb for podcasts, except open, community-run, and free for any app to use.</p>
+
+    <h2>Where the data comes from</h2>
+    <ul>
+      <li><strong>The feeds themselves.</strong> Shows that use the Podcasting 2.0 <code>&lt;podcast:person&gt;</code> tag already say who's on them. We crawl those feeds and keep the credits in sync. These are marked <span class="badge feed">feed</span>.</li>
+      <li><strong>People like you.</strong> Most shows don't tag anyone, so the community fills the gaps, from this site or right inside <a href="https://www.pinepods.online">Pinepods</a>. Community additions show up immediately, marked <span class="badge unverified">unverified</span> until a moderator has looked at them.</li>
+    </ul>
+
+    <h2>Why it exists</h2>
+    <p>Following a person instead of a show is one of the best ways to find new podcasts. Your favorite guest turns up on a show you've never heard of; a host you like starts a new series. That only works if something knows who is on what. Podcast directories mostly don't, so we built it, and made the data open so every app can use it.</p>
+
+    <h2>Who uses it</h2>
+    <p><a href="https://www.pinepods.online">Pinepods</a> shows hosts and guests on every podcast and episode, lets you follow people across shows, and lets you add missing people from the app. Any other app can use the <a href="/docs/api">API</a> or grab the <a href="/api/public-dataset">full dataset</a>.</p>
+
+    <h2>Open data</h2>
+    <p>Everything here is public: download it as <a href="/api/public-dataset">JSON</a> or <a href="/api/download-database">SQLite</a>, mirror it with the <a href="/docs/api#changes">changes feed</a>, or <a href="/docs/self-host">run your own copy</a>. The code is on <a href="https://github.com/madeofpendletonwool/podpeople-db">GitHub</a>.</p>
+  </article>
+</div>
+{% endblock %}

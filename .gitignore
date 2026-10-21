@@ -24,3 +24,8 @@ go.work.sum
 # env file
 .env
 /target
+
+# Local data
+*.sqlite
+*.sqlite-*
+podpeople-dataset-*.json

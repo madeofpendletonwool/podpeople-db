@@ -1,0 +1,66 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+<div class="wrap">
+  <section class="entity person">
+    {% call m::avatar(person.name, person.img, "xl") %}{% endcall %}
+    <div class="grow">
+      <h1>{{ person.name }}</h1>
+      <div class="byline">
+        {{ crate::web::h::plural(podcasts.len() as i64, "podcast") }}{% if episode_count > 0 %} · {{ crate::web::h::plural(episode_count, "episode appearance") }}{% endif %}
+        {% if !person.verified %} <span class="badge unverified">unverified</span>{% endif %}
+      </div>
+      {% if let Some(bio) = person.bio %}<p class="desc">{{ bio }}</p>{% endif %}
+      <div class="links">
+        {% if let Some(w) = person.website %}<a class="btn btn-sm" href="{{ w }}" rel="nofollow noopener" target="_blank"><svg><use href="#i-globe"/></svg>{{ crate::web::h::host_of(w) }}</a>{% endif %}
+        <button class="btn btn-sm btn-ghost" type="button" data-edit-toggle><svg><use href="#i-pencil"/></svg>Edit details</button>
+        {% if l.is_admin %}<a class="btn btn-sm btn-ghost" href="/admin/people/{{ person.id }}">Moderate</a>{% endif %}
+      </div>
+      <form class="card form-grid" data-person-edit="{{ person.id }}" hidden style="margin-top: 16px; max-width: 560px; text-align: left">
+        <div class="field"><label for="pe-name">Name</label><input class="input" id="pe-name" name="name" value="{{ person.name }}" required maxlength="120"></div>
+        <div class="field"><label for="pe-img">Photo URL</label><input class="input" id="pe-img" name="img" type="url" value="{{ person.img.as_deref().unwrap_or("") }}" placeholder="https://…"></div>
+        <div class="field"><label for="pe-web">Website</label><input class="input" id="pe-web" name="website" type="url" value="{{ person.website.as_deref().unwrap_or("") }}" placeholder="https://…"></div>
+        <div class="field"><label for="pe-bio">Bio</label><textarea class="textarea" id="pe-bio" name="bio" maxlength="2000">{{ person.bio.as_deref().unwrap_or("") }}</textarea></div>
+        <input class="hp" name="homepage" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="row"><button class="btn btn-primary">Save</button><button class="btn btn-ghost" type="button" data-edit-toggle>Cancel</button><span class="faint small">Changes go live right away.</span></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 20px">
+    <div class="section-head"><h2>Podcasts</h2></div>
+    <div class="podcast-grid">
+      {% for p in podcasts %}
+      <a class="podcast-tile" href="/podcasts/{{ p.podcast.id }}">
+        {% call m::cover(p.podcast.image, "") %}{% endcall %}
+        <span class="grow">
+          <span class="title clamp-2">{{ p.podcast.title }}</span>
+          <span class="sub"><span style="text-transform: capitalize">{{ p.roles.replace(",", ", ") }}</span>{% if !p.podcast_level && p.episode_count > 0 %} · {{ crate::web::h::plural(p.episode_count, "episode") }}{% endif %}</span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if !episodes.is_empty() %}
+  <section class="section" style="padding-top: 8px" id="episodes">
+    <div class="section-head"><h2>Episode appearances</h2><span class="count">{{ crate::web::h::num(episode_count) }}</span></div>
+    <div class="card timeline" style="padding: 4px 20px">
+      {% for e in episodes %}
+      <article class="episode">
+        {% if let Some(img) = e.episode.image %}{% call m::cover(Some(img.clone()), "") %}{% endcall %}{% else %}{% call m::cover(e.podcast_image, "") %}{% endcall %}{% endif %}
+        <div>
+          <a class="title" href="/podcasts/{{ e.episode.podcast_id }}/episodes/{{ e.episode.id }}">{{ e.episode.title }}</a>
+          <div class="meta"><a href="/podcasts/{{ e.episode.podcast_id }}">{{ e.podcast_title }}</a> · {{ crate::web::h::date(e.episode.pub_date) }} · <span style="text-transform: capitalize">{{ e.role.replace(",", ", ") }}</span></div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <nav class="pager">
+      {% if page > 1 %}<a class="btn btn-sm" href="?page={{ page - 1 }}#episodes">Newer</a>{% endif %}
+      {% if has_more %}<a class="btn btn-sm" href="?page={{ page + 1 }}#episodes">Older</a>{% endif %}
+    </nav>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

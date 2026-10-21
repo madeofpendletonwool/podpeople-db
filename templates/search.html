@@ -1,0 +1,73 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+<div class="wrap">
+  <section class="section">
+    <h1 style="font-size: 2rem">{% if q.is_empty() %}Search{% else %}Results for “{{ q }}”{% endif %}</h1>
+
+    {% if q.is_empty() %}
+    <p class="muted">Search for a person or a podcast using the box above.</p>
+    {% else %}
+
+    <h2 style="margin-top: 28px">People</h2>
+    {% if people.is_empty() %}
+    <p class="muted">Nobody by that name yet. Know which show they're on? Find the show below and add them.</p>
+    {% else %}
+    <div class="people-grid">
+      {% for p in people %}
+      <a class="person-tile" href="{{ crate::web::h::person_url(p.person.id, p.person.slug) }}">
+        {% call m::avatar(p.person.name, p.person.img, "lg") %}{% endcall %}
+        <span class="name">{{ p.person.name }}</span>
+        <span class="sub clamp-2">{% if let Some(k) = p.known_for %}{{ k }}{% else %}{{ crate::web::h::plural(p.podcast_count, "podcast") }}{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h2 style="margin-top: 36px">Podcasts</h2>
+    {% if local.is_empty() && index.is_empty() %}
+    <p class="muted">No podcasts found.</p>
+    {% endif %}
+    {% if !local.is_empty() %}
+    <div class="podcast-grid">
+      {% for p in local %}
+      <a class="podcast-tile" href="/podcasts/{{ p.id }}">
+        {% call m::cover(p.image, "") %}{% endcall %}
+        <span class="grow"><span class="title clamp-2">{{ p.title }}</span><span class="sub">{% if p.people_count > 0 %}{{ crate::web::h::plural(p.people_count, "person") }}{% else %}No people yet{% endif %}</span></span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if !index.is_empty() %}
+    <p class="faint small" style="margin: 18px 0 8px">From the Podcast Index</p>
+    <div class="podcast-grid">
+      {% for p in index %}
+      <a class="podcast-tile" href="/podcast/{{ p.podcastindex_id }}">
+        {% call m::cover(p.image, "") %}{% endcall %}
+        <span class="grow"><span class="title clamp-2">{{ p.title }}</span><span class="sub truncate">{{ p.author }}</span></span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card" style="margin-top: 32px">
+      <h3>Show not listed?</h3>
+      <p class="muted small">Paste its RSS feed URL, or add a show that has no public feed by name.</p>
+      <form class="row wrap-row" action="/podcasts/add" method="get">
+        <input class="input" style="flex: 2; min-width: 220px" name="feed_url" type="url" placeholder="https://example.com/feed.xml" required>
+        <button class="btn">Open feed</button>
+      </form>
+      <details class="more"><summary>The show has no public feed</summary>
+        <form class="form-grid" data-manual-podcast style="margin-top: 10px">
+          <div class="field"><label for="mp-title">Show name</label><input class="input" id="mp-title" name="title" required maxlength="200"></div>
+          <div class="field"><label for="mp-link">Website (optional)</label><input class="input" id="mp-link" name="link" type="url"></div>
+          <div class="field"><label for="mp-people">Who's on it?</label><input class="input" id="mp-people" name="people" placeholder="Alice, Bob and Carol" required></div>
+          <input class="hp" name="homepage" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div><button class="btn btn-primary">Add show</button></div>
+        </form>
+      </details>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
