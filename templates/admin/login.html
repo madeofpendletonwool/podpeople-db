@@ -1,0 +1,14 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="wrap">
+  <div class="card login">
+    <div class="row" style="margin-bottom: 16px"><img src="/static/img/mark-256.png" alt="" width="40" height="40" style="border-radius: 50%"><h2 style="margin: 0">Admin sign in</h2></div>
+    {% if let Some(e) = error %}<div class="notice err" style="margin-bottom: 14px"><svg><use href="#i-warn"/></svg><span>{{ e }}</span></div>{% endif %}
+    <form method="post" action="/admin/login" class="form-grid">
+      <div class="field"><label for="u">Username</label><input class="input" id="u" name="username" autocomplete="username" required autofocus></div>
+      <div class="field"><label for="p">Password</label><input class="input" id="p" name="password" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary">Sign in</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

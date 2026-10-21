@@ -1,0 +1,11 @@
+{% macro avatar(name, img, size) %}
+{% if let Some(src) = img %}<img class="avatar {{ size }}" src="{{ crate::web::h::img(src) }}" alt="" loading="lazy" data-fallback="{{ crate::web::h::initials(name) }}" style="--avatar-bg: {{ crate::web::h::avatar_color(name) }}">{% else %}<span class="avatar initials {{ size }}" style="--avatar-bg: {{ crate::web::h::avatar_color(name) }}" aria-hidden="true">{{ crate::web::h::initials(name) }}</span>{% endif %}
+{% endmacro %}
+
+{% macro cover(img, size) %}
+{% if let Some(src) = img %}<img class="cover {{ size }}" src="{{ crate::web::h::cover_img(src) }}" alt="" loading="lazy">{% else %}<img class="cover {{ size }}" src="/static/img/cover.svg" alt="">{% endif %}
+{% endmacro %}
+
+{% macro trust(verified, from_feed) %}
+{% if from_feed %}<span class="badge feed" title="From the podcast's own feed">feed</span>{% elif !verified %}<span class="badge unverified" title="Added by the community, not yet reviewed">unverified</span>{% endif %}
+{% endmacro %}

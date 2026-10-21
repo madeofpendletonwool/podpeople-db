@@ -1,0 +1,70 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="wrap docs-layout">
+  {% include "_docs_nav.html" %}
+  <article class="prose">
+    <h1>API</h1>
+    <p>A JSON API, no key needed, CORS open. Base URL: <code>{{ base_url }}/api/v2</code>. Please send a descriptive <code>User-Agent</code>. If you're forwarding contributions on behalf of your users, also send <code>X-PodPeople-Client: yourapp/1.2</code>.</p>
+
+    <h2>Identifying podcasts</h2>
+    <p>Wherever an endpoint takes a podcast, pass any one of <code>podcastindex_id</code>, <code>feed_url</code>, <code>guid</code> (the <code>podcast:guid</code>), or our own <code>id</code>.</p>
+    <p>Each person on a podcast comes with a <code>scope</code>: <code>"podcast"</code> means they're credited on the show itself (a regular), <code>"episodes"</code> means they're only credited on individual episodes. <code>sources</code> says whether the credit came from the show's <code>feed</code> or the <code>community</code>, and <code>verified</code> is false for community additions nobody has reviewed yet.</p>
+
+    <div class="endpoint"><span class="method">GET</span><code>/podcasts/lookup?podcastindex_id=920666</code></div>
+    <p>A podcast and its people. If we've never seen it, it's added from the Podcast Index (or its feed) and crawled first, so the first call can take a few seconds. Add <code>add=false</code> to only look at what we already have.</p>
+<pre><code>{
+  "podcast": { "id": 138, "podcastindex_id": 920666, "title": "Podcasting 2.0", "feed_url": "…", "has_person_tags": true, … },
+  "people": [
+    { "person": { "id": 205, "slug": "adam-curry", "name": "Adam Curry", "img": "…", "verified": true },
+      "roles": ["host"], "group": "cast", "scope": "podcast", "episode_count": 208,
+      "sources": ["feed"], "verified": true }
+  ],
+  "guests": [ … ],
+  "suggestions": ["Jane Example"],
+  "episode_count": 208
+}</code></pre>
+
+    <div class="endpoint"><span class="method post">POST</span><code>/podcasts/batch</code></div>
+    <p>People for up to 500 podcasts in one request, from data we already have (never crawls). Unknown podcasts are left out of <code>results</code>. With <code>include_episode_credits</code>, community credits on individual episodes come along too. Feed credits are skipped there, since you have the feed.</p>
+<pre><code>{ "podcasts": [{ "podcastindex_id": 920666 }, { "feed_url": "https://example.com/feed.xml" }],
+  "include_episode_credits": true }</code></pre>
+
+    <div class="endpoint"><span class="method">GET</span><code>/podcasts/{id}</code> · <code>/podcasts/{id}/episodes?limit=20&amp;offset=0</code></div>
+    <p>By our id. Episodes come newest first, each with its <code>people</code>.</p>
+
+    <div class="endpoint"><span class="method">GET</span><code>/episodes/lookup?podcastindex_id=…&amp;episode_guid=…</code></div>
+    <p>One episode's credits, by podcast plus <code>episode_guid</code> or <code>enclosure_url</code>.</p>
+
+    <div class="endpoint"><span class="method">GET</span><code>/podcasts/search?q=…</code></div>
+    <p>Podcasts we have (<code>local</code>), plus Podcast Index matches we don't have yet (<code>index</code>).</p>
+
+    <div class="endpoint"><span class="method">GET</span><code>/people/search?q=…</code></div>
+    <p>Typeahead-friendly person search: exact matches first, then prefix matches, ranked by how many shows someone is on. <code>known_for</code> lists a few of their shows to tell namesakes apart.</p>
+
+    <div class="endpoint"><span class="method">GET</span><code>/people/{id}</code> · <code>/people/{id}/episodes?limit=50&amp;offset=0</code></div>
+    <p>A person, every podcast they're on, and the episodes they're individually credited on. If the id belonged to someone who was merged into another person, you get the merged person and <code>merged_from</code> tells you to update the id you stored.</p>
+
+    <div class="endpoint"><span class="method post">POST</span><code>/submissions</code></div>
+    <p>Add people to a podcast, or to one episode. Live immediately (unverified). Names that exactly match an existing person reuse them; pass <code>person_id</code> to pick someone specific. Role defaults to <code>host</code> on a podcast and <code>guest</code> on an episode.</p>
+<pre><code>{
+  "podcast": { "podcastindex_id": 920666 },
+  "episode": { "guid": "…", "enclosure_url": "…", "title": "Episode 200" },   // optional
+  "people": [ { "name": "Jane Example", "role": "co-host" }, { "person_id": 205 } ],
+  "instance_id": "random-id-for-your-installation"                           // optional
+}</code></pre>
+    <p>Podcasts with no public feed can be created on the fly by passing <code>"podcast": {"title": "…", "link": "…"}</code>. Rate limited per IP.</p>
+
+    <div class="endpoint"><span class="method post">POST</span><code>/people/{id}/edit</code></div>
+    <p>Update <code>name</code>, <code>bio</code>, <code>img</code> or <code>website</code>. Only the fields you send change; an empty string clears a field.</p>
+
+    <div class="endpoint"><span class="method">GET</span><code>/discover/top-people</code> · <code>/discover/recent-people</code> · <code>/discover/popular-podcasts</code> · <code>/stats</code></div>
+
+    <h2 id="changes">Mirroring</h2>
+    <div class="endpoint"><span class="method">GET</span><code>/changes?since=2026-10-01T00:00:00Z</code></div>
+    <p>Everything public that changed since a timestamp (RFC 3339 or Unix seconds): <code>people</code>, <code>podcasts</code>, <code>episodes</code> (only credited ones), <code>credits</code> and <code>deletions</code>. Store the response's <code>until</code> and pass it as <code>since</code> next time. <a href="/api/v2/dump"><code>/dump</code></a> is the same thing from the beginning of time. There's also a <a href="/api/download-database">SQLite download</a>.</p>
+
+    <h2>v1 endpoints</h2>
+    <p><code>/api/hosts/{podcastindex_id}</code>, <code>/api/host-search?name=</code>, <code>/api/podcast/{podcastindex_id}</code> and <code>/api/discover/*</code> still work with their old response shapes, so older Pinepods versions keep working. New code should use v2.</p>
+  </article>
+</div>
+{% endblock %}

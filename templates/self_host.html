@@ -1,0 +1,49 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="wrap docs-layout">
+  {% include "_docs_nav.html" %}
+  <article class="prose">
+    <h1>Self-hosting</h1>
+    <p>PodPeopleDB is a single binary with an embedded SQLite database. Run it next to Pinepods if you'd like your own copy, or if you'd rather your server never talk to podpeopledb.com.</p>
+
+    <h2>Docker Compose</h2>
+<pre><code>services:
+  podpeopledb:
+    image: madeofpendletonwool/podpeople_db:latest
+    ports:
+      - "8085:8085"
+    environment:
+      BASE_URL: https://people.example.com
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: change-me
+      SEARCH_API_URL: https://search.pinepods.online
+      # Optional: get a push notification for every contribution
+      # NTFY_URL: https://ntfy.sh
+      # NTFY_TOPIC: your-secret-topic
+    volumes:
+      - ./podpeople-data:/app/podpeople-data
+    restart: unless-stopped</code></pre>
+    <p>Then point Pinepods at it with <code>PEOPLE_API_URL=https://people.example.com</code>.</p>
+
+    <h2>Settings</h2>
+    <div class="table-wrap"><table>
+      <tr><th>Variable</th><th>Default</th><th>What it does</th></tr>
+      <tr><td><code>BASE_URL</code></td><td><code>http://localhost:8085</code></td><td>Public address. Session cookies are marked Secure when it's https.</td></tr>
+      <tr><td><code>DB_PATH</code></td><td><code>/app/podpeople-data/podpeople-v2.sqlite</code></td><td>The database file.</td></tr>
+      <tr><td><code>ADMIN_USERNAME</code> / <code>ADMIN_PASSWORD</code></td><td><code>admin</code> / <code>admin</code></td><td>First admin, created on first boot only.</td></tr>
+      <tr><td><code>SEARCH_API_URL</code></td><td><code>https://search.pinepods.online</code></td><td>Podcast Index proxy used to look podcasts up.</td></tr>
+      <tr><td><code>NTFY_URL</code> / <code>NTFY_TOPIC</code></td><td>off</td><td>Push a notification for each contribution.</td></tr>
+      <tr><td><code>RECRAWL_HOURS</code></td><td><code>24</code></td><td>How often feeds are re-read.</td></tr>
+      <tr><td><code>SUBMISSIONS_PER_HOUR</code></td><td><code>120</code></td><td>Contributions allowed per IP per hour.</td></tr>
+      <tr><td><code>CRAWLER_ENABLED</code></td><td><code>true</code></td><td>Turn background crawling off (e.g. read-only mirrors).</td></tr>
+      <tr><td><code>IP_HASH_SALT</code></td><td>built-in</td><td>Set a random value: IPs are only stored as salted hashes, for rate limiting and abuse cleanup.</td></tr>
+    </table></div>
+
+    <h2>Upgrading from v1</h2>
+    <p>Mount the same data folder. On first start, v2 finds the old <code>podpeopledb.sqlite</code> and imports it into a new <code>podpeople-v2.sqlite</code>: people keep their ids (so links and Pinepods subscriptions keep working), pending submissions land in the review queue, and admin passwords carry over. The old file is never modified, so rolling back is just running the old image again.</p>
+
+    <h2>Seeding a mirror</h2>
+    <p>In the admin area, <em>Data → Import</em> accepts a JSON dump from <a href="/api/v2/dump">/api/v2/dump</a> and merges it into your database. Keep it current with <a href="/docs/api#changes">/api/v2/changes</a>.</p>
+  </article>
+</div>
+{% endblock %}

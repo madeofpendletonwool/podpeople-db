@@ -1,0 +1,70 @@
+{% extends "admin/_shell.html" %}
+{% import "_macros.html" as m %}
+{% block admin %}
+<div class="row wrap-row" style="margin-bottom: 8px">
+  <h1 style="font-size: 1.8rem; margin: 0">Review queue</h1>
+  <span class="spacer"></span>
+  {% if status == "live" && !items.is_empty() %}
+  <form method="post" action="/admin/submissions/approve-page" data-confirm="Approve all {{ items.len() }} submissions on this page?">
+    <input type="hidden" name="csrf" value="{{ l.csrf }}">
+    {% for i in items %}<input type="hidden" name="ids" value="{{ i.sub.id }}">{% endfor %}
+    <button class="btn btn-ok btn-sm"><svg><use href="#i-check"/></svg>Approve this page</button>
+  </form>
+  {% endif %}
+</div>
+<p class="muted small">Everything here is already live. Approve it to mark it verified, or revert it to undo it completely.</p>
+<div class="tabs">
+  <a href="/admin?status=live" {% if status == "live" %}aria-current="page"{% endif %}>Unreviewed</a>
+  <a href="/admin?status=approved" {% if status == "approved" %}aria-current="page"{% endif %}>Approved</a>
+  <a href="/admin?status=reverted" {% if status == "reverted" %}aria-current="page"{% endif %}>Reverted</a>
+</div>
+{% if items.is_empty() %}
+<div class="empty card"><svg><use href="#i-shield"/></svg><p style="margin: 0">{% if status == "live" %}All caught up.{% else %}Nothing here.{% endif %}</p></div>
+{% else %}
+<div class="card flush">
+  {% for i in items %}
+  <div class="queue-item" data-queue-item>
+    <div class="head">
+      <div class="grow">
+        <div style="font-weight: 600">{{ i.sub.summary }}</div>
+        <div class="faint small">
+          {{ crate::web::h::ago(i.sub.created_at) }} · via {{ i.sub.client }}
+          {% if let Some(pid) = i.sub.podcast_id %} · <a href="/podcasts/{{ pid }}">{{ i.sub.podcast_title.as_deref().unwrap_or("podcast") }}</a>{% endif %}
+          {% if i.related > 1 %} · <span title="Same IP or Pinepods server">{{ i.related }} unreviewed from this source</span>{% endif %}
+          {% if let Some(r) = i.sub.reviewer %} · {{ i.sub.status }} by {{ r }}{% endif %}
+        </div>
+      </div>
+      <span class="badge {{ i.sub.status }}">{% if i.sub.status == "live" %}unreviewed{% else %}{{ i.sub.status }}{% endif %}</span>
+    </div>
+    {% if !i.people.is_empty() %}
+    <div class="people-line">
+      {% for p in i.people %}<a class="mini-person" href="{{ crate::web::h::person_url(p.id, p.slug) }}">{% call m::avatar(p.name, p.img, "xs") %}{% endcall %}{{ p.name }}</a>{% endfor %}
+    </div>
+    {% endif %}
+    {% if !i.diff.is_empty() %}
+    <div class="diff">
+      {% for d in i.diff %}<span class="faint">{{ d.0 }}</span><span><span class="old">{{ d.1 }}</span> → <span class="new">{{ d.2 }}</span></span>{% endfor %}
+    </div>
+    {% endif %}
+    {% if i.sub.status == "live" %}
+    <div class="actions">
+      <form method="post" action="/admin/submissions/{{ i.sub.id }}/approve"><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm btn-ok"><svg><use href="#i-check"/></svg>Approve</button></form>
+      <form method="post" action="/admin/submissions/{{ i.sub.id }}/revert"><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm btn-danger"><svg><use href="#i-x"/></svg>Revert</button></form>
+      {% if i.related > 1 %}
+      <form method="post" action="/admin/submissions/{{ i.sub.id }}/revert-related" data-confirm="Revert all {{ i.related }} unreviewed submissions from this source?"><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm btn-ghost btn-danger">Revert all {{ i.related }} from this source</button></form>
+      {% endif %}
+    </div>
+    {% elif i.sub.status == "approved" %}
+    <div class="actions">
+      <form method="post" action="/admin/submissions/{{ i.sub.id }}/revert" data-confirm="Revert this approved submission?"><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm btn-ghost btn-danger">Revert anyway</button></form>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+<nav class="pager">
+  {% if page > 1 %}<a class="btn btn-sm" href="?status={{ status }}&page={{ page - 1 }}">Previous</a>{% endif %}
+  {% if has_more %}<a class="btn btn-sm" href="?status={{ status }}&page={{ page + 1 }}">Next</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

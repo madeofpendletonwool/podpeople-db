@@ -1,96 +1,57 @@
 # PodPeopleDB
 
-PodPeopleDB is an open-source database for podcast hosts and guests, serving as the IMDB of podcasting. It automatically indexes podcast host information from podcast feeds and allows manual submissions of host/guest information.
+The open, community-built database of podcast hosts and guests: who's on which podcast, and where
+else they turn up. Live at [podpeopledb.com](https://podpeopledb.com) and built into
+[Pinepods](https://www.pinepods.online).
 
-## Features
+- **Reads the feeds.** Shows that use the Podcasting 2.0 `<podcast:person>` tag are crawled and
+  their credits kept in sync, channel- and episode-level.
+- **Fills the gaps with the community.** Anyone can add people to a show or an episode: no account,
+  name is the only required field, paste a list to add several. Additions go live immediately
+  (marked unverified) and admins review them afterwards, with one-click revert.
+- **Open data.** JSON API, full JSON dump, scrubbed SQLite download, and a changes feed for mirrors.
 
-- **Podcast Host Database**: Track hosts and guests across different podcasts
-- **Automatic Feed Parsing**: Extracts host information from `<podcast:person>` tags in podcast feeds
-- **Manual Submissions**: Allow users to submit additional host/guest information
-- **Public API**: Access podcast host data programmatically
-- **SQLite Database**: Download the entire database for offline use
-- **Admin Dashboard**: Moderate and approve host submissions
+## Running it
 
-## How It Works
-
-PodPeopleDB uses the Podcast Index Feed ID to look up podcasts and automatically extracts host information from podcast feeds that use the podcasting 2.0 `<podcast:person>` tags. For podcasts without these tags, users can manually submit host information.
-
-### Data Structure
-
-- **Hosts**: Names, roles, descriptions, images, and associated podcasts
-- **Podcasts**: Title, description, author, owner, images, and feed URLs
-- **Automatic Updates**: Keeps host information current based on feed data
-
-## API Endpoints
-
-```
-GET /api/podcast/{id}     - Get podcast information by Podcast Index ID
-GET /api/hosts/{id}       - Get hosts for a specific podcast
-GET /api/recent-hosts     - Get recently added hosts
-GET /api/download-database - Download the entire SQLite database
+```yaml
+services:
+  podpeopledb:
+    image: madeofpendletonwool/podpeople_db:latest
+    ports: ["8085:8085"]
+    environment:
+      BASE_URL: https://people.example.com
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: change-me
+      SEARCH_API_URL: https://search.pinepods.online
+      IP_HASH_SALT: change-me-to-something-random
+    volumes:
+      - ./podpeople-data:/app/podpeople-data
 ```
 
-## Installation
+All settings are documented on the site at `/docs/self-host`.
 
-1. Clone the repository:
-```bash
-git clone https://github.com/madeofpendletonwool/podpeople-db.git
+**Upgrading from v1 (Go):** mount the same data folder. On first start v2 imports the old
+`podpeopledb.sqlite` into a new `podpeople-v2.sqlite`, keeping person ids (Pinepods stores them),
+admin passwords and pending submissions. The v1 file is never written to.
+
+## API
+
+`/api/v2` is documented at `/docs/api`. The v1 endpoints (`/api/hosts/{id}`, `/api/host-search`,
+`/api/podcast/{id}`, `/api/discover/*`) still answer in their old shapes for older Pinepods.
+
+## Development
+
+Rust (axum, sqlx/SQLite, askama templates). Static assets and templates are compiled into the binary.
+
+```sh
+DB_PATH=./dev.sqlite ADMIN_PASSWORD=devpassword cargo run
+cargo test   # unit + end-to-end tests, no network needed
 ```
 
-2. Build the Docker container:
-```bash
-docker build -t podpeople-db .
-```
-
-3. Run the container:
-```bash
-docker run -p 8080:8080 podpeople-db
-```
-
-### Environment Variables
-
-- `ADMIN_USERNAME`: Admin dashboard username (default: admin)
-- `ADMIN_PASSWORD`: Admin dashboard password (default: admin)
-- `SEARCH_API_URL`: URL for the Podcast Index API
-
-## Usage
-
-1. Access the web interface at `http://localhost:8080`
-2. Enter a Podcast Index Feed ID to look up a podcast
-3. View host information or submit new host details
-4. Download the database for offline use
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## Technologies Used
-
-- Go (1.23+)
-- SQLite
-- Gorilla Mux for routing
-- HTMX for dynamic content
-- Docker for containerization
+Layout: `src/feed.rs` (RSS parsing), `src/crawler.rs`, `src/store/` (queries), `src/submit.rs`
+(contributions), `src/api/` (JSON API, v2 + legacy), `src/web/` (pages + admin), `templates/`,
+`static/`, `migrations/`.
 
 ## License
 
-This project is open source and available under the [GNU GENERAL PUBLIC LICENSE](LICENSE).
-
-## Acknowledgments
-
-- Thanks to the Podcast Index for providing the podcast data API
-- Built to support the Podcasting 2.0 initiative and namespace
-- Inspired by the need for better podcast host discovery and tracking
-
-## Security Note
-
-Please make sure to change the default admin credentials in production by setting the appropriate environment variables.
-
-## ToDo
-
-V1:
-- Add Episode specific entries
+GPL-3.0

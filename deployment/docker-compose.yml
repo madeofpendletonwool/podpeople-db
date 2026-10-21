@@ -1,12 +1,16 @@
-version: '3'
 services:
   podpeopledb:
     image: madeofpendletonwool/podpeople_db:latest
     ports:
       - "8085:8085"
     environment:
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=password
-      - SEARCH_API_URL=http://search-api:5000
+      BASE_URL: https://people.example.com
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: change-me
+      SEARCH_API_URL: https://search.pinepods.online
+      IP_HASH_SALT: change-me-to-something-random
+      # NTFY_URL: https://ntfy.sh
+      # NTFY_TOPIC: your-secret-topic
     volumes:
-      - /my/db/mount/point/podpeople-data:/app/podpeople-data
+      - ./podpeople-data:/app/podpeople-data
+    restart: unless-stopped

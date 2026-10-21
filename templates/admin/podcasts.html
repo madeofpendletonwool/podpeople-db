@@ -1,0 +1,37 @@
+{% extends "admin/_shell.html" %}
+{% import "_macros.html" as m %}
+{% block admin %}
+<h1 style="font-size: 1.8rem">Podcasts</h1>
+<form class="row" method="get" action="/admin/podcasts" style="margin-bottom: 20px">
+  <div class="search" style="flex: 1"><svg><use href="#i-search"/></svg><input type="search" name="q" value="{{ q }}" placeholder="Find a podcast by title"></div>
+  <button class="btn">Search</button>
+</form>
+{% if !q.is_empty() %}
+<div class="card flush" style="margin-bottom: 28px">
+  {% for p in results %}
+  <div class="person-row">
+    {% call m::cover(p.image, "") %}{% endcall %}
+    <span class="grow"><a class="name" href="/podcasts/{{ p.id }}">{{ p.title }}</a><br><span class="faint small">#{{ p.id }}{% if let Some(pi) = p.podcastindex_id %} · PI {{ pi }}{% endif %} · {{ crate::web::h::plural(p.people_count, "person") }}</span></span>
+    <form method="post" action="/admin/podcasts/{{ p.id }}/recrawl"><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm">Re-crawl</button></form>
+    <form method="post" action="/admin/podcasts/{{ p.id }}/delete" data-confirm="Delete {{ p.title }}, its episodes and every credit on it?"><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm btn-ghost btn-danger">Delete</button></form>
+  </div>
+  {% endfor %}
+  {% if results.is_empty() %}<p class="muted" style="padding: 16px">Nothing matches.</p>{% endif %}
+</div>
+{% endif %}
+
+<h2>Feeds that keep failing</h2>
+{% if failing.is_empty() %}<p class="faint">None. Every feed crawled fine last time.</p>{% else %}
+<div class="table-wrap"><table>
+  <tr><th>Podcast</th><th>Failures</th><th>Last error</th><th></th></tr>
+  {% for f in failing %}
+  <tr>
+    <td><a href="/podcasts/{{ f.id }}">{{ f.title }}</a><br><span class="faint small truncate" style="display: block; max-width: 320px">{{ f.feed_url.as_deref().unwrap_or("no feed URL") }}</span></td>
+    <td>{{ f.crawl_failures }}</td>
+    <td class="small">{{ f.crawl_error.as_deref().unwrap_or("") }}</td>
+    <td><form method="post" action="/admin/podcasts/{{ f.id }}/recrawl"><input type="hidden" name="csrf" value="{{ l.csrf }}"><button class="btn btn-sm">Retry</button></form></td>
+  </tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "admin/_shell.html" %}
+{% block admin %}
+<h1 style="font-size: 1.8rem">Data</h1>
+<div class="stats" style="justify-content: flex-start; margin: 8px 0 28px">
+  <div class="stat"><b>{{ crate::web::h::num(stats.people) }}</b><span>people</span></div>
+  <div class="stat"><b>{{ crate::web::h::num(stats.podcasts) }}</b><span>podcasts</span></div>
+  <div class="stat"><b>{{ crate::web::h::num(stats.credits) }}</b><span>credits</span></div>
+  <div class="stat"><b>{{ crate::web::h::num(stats.community_credits) }}</b><span>from the community</span></div>
+</div>
+<div class="layout" style="grid-template-columns: 1fr 1fr">
+  <div class="card">
+    <h3>Export</h3>
+    <p class="muted small">Public data only. Admin accounts, sessions and IP hashes are never included.</p>
+    <div class="row wrap-row">
+      <a class="btn" href="/api/public-dataset">JSON dataset</a>
+      <a class="btn" href="/api/download-database">SQLite snapshot</a>
+    </div>
+  </div>
+  <form class="card form-grid" method="post" action="/admin/data/import" enctype="multipart/form-data">
+    <h3>Import</h3>
+    <p class="muted small" style="margin: 0">Merge a JSON dump from another PodPeopleDB (<code>/api/v2/dump</code> or the JSON dataset). People are matched by name, podcasts by Podcast Index id or feed URL; nothing existing is overwritten.</p>
+    <input type="hidden" name="csrf" value="{{ l.csrf }}">
+    <input class="input" type="file" name="file" accept="application/json,.json" required>
+    <div><button class="btn btn-primary">Import</button></div>
+  </form>
+</div>
+{% if let Some(r) = report %}
+<div class="card" style="margin-top: 20px"><h3>Last import</h3><pre><code>{{ r }}</code></pre></div>
+{% endif %}
+{% endblock %}

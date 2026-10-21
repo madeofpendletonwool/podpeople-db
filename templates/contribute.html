@@ -1,0 +1,36 @@
+{% extends "_base.html" %}
+{% block content %}
+<div class="wrap docs-layout">
+  {% include "_docs_nav.html" %}
+  <article class="prose">
+    <h1>Contributing</h1>
+    <p>Adding people should take less time than reading this page. No account, no sign-up, no waiting for approval.</p>
+
+    <h2>Add the people on a show</h2>
+    <ol>
+      <li><a href="/search">Search</a> for the show. Anything in the Podcast Index works, you can paste an RSS feed URL, and shows with no public feed can be added by name.</li>
+      <li>In the <em>Who's on this show?</em> box, type a name and press <kbd>Enter</kbd>. Paste a list like “Alice, Bob and Carol” to add several at once.</li>
+      <li>If the person already exists elsewhere, pick them from the suggestions. That links the shows together, so people following them see the new one.</li>
+      <li>Hit <strong>Add</strong>. They appear on the page immediately.</li>
+    </ol>
+    <p>The role defaults to Host. Pick Co-host, Guest or Producer if that fits better. Photos, links and bios are optional, and anyone can add them later from the person's page.</p>
+
+    <h2>Add the guests on an episode</h2>
+    <p>Open an episode from the show's page (or click <em>+ who's on this?</em> under it) and add names the same way. Guests usually only appear on a few episodes, so crediting them per episode keeps their profiles accurate.</p>
+
+    <h2>From Pinepods</h2>
+    <p>If you use <a href="https://www.pinepods.online">Pinepods</a>, you don't need this site at all: podcast and episode pages have an <em>Add people</em> button that sends your additions here.</p>
+
+    <h2>What happens next</h2>
+    <p>Your addition goes live right away, marked <span class="badge unverified">unverified</span>. A moderator reviews it later and either confirms it or rolls it back. Shows that tag people in their own feed (<span class="badge feed">feed</span>) are kept in sync automatically, and those credits can't be changed here; if they're wrong, the fix belongs in the feed.</p>
+
+    <h2>Ground rules</h2>
+    <ul>
+      <li>Real people who are actually on the show. No jokes, no spam, no self-promotion on shows you're not on.</li>
+      <li>Use the name people know them by.</li>
+      <li>Only link photos you'd be comfortable seeing on an album cover.</li>
+    </ul>
+    <p>Abuse gets reverted in one click, and repeat offenders get blocked. Everyone else: thank you!</p>
+  </article>
+</div>
+{% endblock %}
